@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Upload, FileText, Database, ChevronRight, Loader2, Cpu, Zap, Brain, CheckCircle2 } from 'lucide-react';
+import { Upload, FileText, Database, ChevronRight, Loader2, Cpu, Zap, Brain, CheckCircle2, MapPin, Calendar, Thermometer, Droplets, Info } from 'lucide-react';
 
 // 🛑 STEP 1: PASTE YOUR NGROK URL HERE
 // Leave empty to use mock data for testing
@@ -11,6 +11,27 @@ interface UploadPageProps {
   onNavigate: (page: string) => void;
 }
 
+interface SampleMetadata {
+  sampleId: string;
+  location: {
+    latitude: string;
+    longitude: string;
+    depth: string;
+    site: string;
+  };
+  datetime: {
+    date: string;
+    time: string;
+  };
+  environmental: {
+    temperature: string;
+    salinity: string;
+    pH: string;
+    dissolvedOxygen: string;
+  };
+  notes: string;
+}
+
 export default function UploadPage({ isDarkMode, onNavigate }: UploadPageProps) {
   const [dragActive, setDragActive] = useState(false);
   // CHANGED: We now store the actual File object, not just the name string
@@ -18,6 +39,27 @@ export default function UploadPage({ isDarkMode, onNavigate }: UploadPageProps) 
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStage, setLoadingStage] = useState(0);
   const [progress, setProgress] = useState(0);
+  const [showMetadata, setShowMetadata] = useState(false);
+  const [metadata, setMetadata] = useState<SampleMetadata>({
+    sampleId: '',
+    location: {
+      latitude: '',
+      longitude: '',
+      depth: '',
+      site: ''
+    },
+    datetime: {
+      date: '',
+      time: ''
+    },
+    environmental: {
+      temperature: '',
+      salinity: '',
+      pH: '',
+      dissolvedOxygen: ''
+    },
+    notes: ''
+  });
 
   // Loading stages with messages
   const loadingStages = [
@@ -91,6 +133,21 @@ export default function UploadPage({ isDarkMode, onNavigate }: UploadPageProps) 
       const files = Array.from(e.target.files);
       setUploadedFiles(prev => [...prev, ...files]);
     }
+  };
+
+  const handleMetadataChange = (section: keyof SampleMetadata, field: string, value: string) => {
+    setMetadata(prev => {
+      if (section === 'sampleId' || section === 'notes') {
+        return { ...prev, [section]: value };
+      }
+      return {
+        ...prev,
+        [section]: {
+          ...(prev[section] as any),
+          [field]: value
+        }
+      };
+    });
   };
 
   // --- 📥 DOWNLOAD ANALYSIS RESULTS TO LOCAL FILES ---
@@ -222,8 +279,16 @@ export default function UploadPage({ isDarkMode, onNavigate }: UploadPageProps) 
       // We send the first file in the list to the backend
       formData.append('file', uploadedFiles[0]);
 
+      // Add metadata if provided
+      if (showMetadata && metadata.sampleId) {
+        formData.append('metadata', JSON.stringify(metadata));
+      }
+
       console.log("🚀 Sending to Backend...");
       console.log("📁 File:", uploadedFiles[0].name);
+      if (showMetadata && metadata.sampleId) {
+        console.log("📋 Metadata:", metadata);
+      }
       console.log("🔗 API URL:", API_URL);
       console.log("⏳ No timeout - will wait as long as needed for GPU processing...");
 
@@ -450,6 +515,290 @@ export default function UploadPage({ isDarkMode, onNavigate }: UploadPageProps) 
                   <span className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>{file.name}</span>
                 </div>
               ))}
+            </div>
+
+            {/* METADATA SECTION */}
+            <div className="mt-6">
+              <button
+                onClick={() => setShowMetadata(!showMetadata)}
+                className={`flex items-center justify-between w-full px-4 py-3 rounded-lg transition-all ${
+                  isDarkMode 
+                    ? 'bg-slate-700/50 hover:bg-slate-700 text-white' 
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-900'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Info className="w-5 h-5" />
+                  <span className="font-semibold">Add Sample Metadata (Optional)</span>
+                </div>
+                <ChevronRight className={`w-5 h-5 transition-transform ${showMetadata ? 'rotate-90' : ''}`} />
+              </button>
+
+              {showMetadata && (
+                <div className={`mt-4 p-6 rounded-lg ${
+                  isDarkMode ? 'bg-slate-700/30' : 'bg-slate-50'
+                }`}>
+                  <p className={`text-sm mb-4 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                    Add contextual information about your sample for better analysis and record-keeping.
+                  </p>
+
+                  <div className="space-y-6">
+                    {/* Sample ID */}
+                    <div>
+                      <label className={`block text-sm font-medium mb-2 ${
+                        isDarkMode ? 'text-slate-300' : 'text-slate-700'
+                      }`}>
+                        Sample ID
+                      </label>
+                      <input
+                        type="text"
+                        value={metadata.sampleId}
+                        onChange={(e) => setMetadata({...metadata, sampleId: e.target.value})}
+                        placeholder="e.g., SAMPLE-001"
+                        className={`w-full px-4 py-2 rounded-lg border ${
+                          isDarkMode 
+                            ? 'bg-slate-800 border-slate-600 text-white placeholder-slate-500' 
+                            : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'
+                        } focus:ring-2 focus:ring-cyan-500 focus:border-transparent`}
+                      />
+                    </div>
+
+                    {/* Location Section */}
+                    <div>
+                      <h4 className={`text-sm font-semibold mb-3 flex items-center gap-2 ${
+                        isDarkMode ? 'text-cyan-400' : 'text-blue-600'
+                      }`}>
+                        <MapPin className="w-4 h-4" />
+                        Location Information
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className={`block text-xs font-medium mb-1 ${
+                            isDarkMode ? 'text-slate-400' : 'text-slate-600'
+                          }`}>
+                            Latitude
+                          </label>
+                          <input
+                            type="text"
+                            value={metadata.location.latitude}
+                            onChange={(e) => handleMetadataChange('location', 'latitude', e.target.value)}
+                            placeholder="e.g., 37.7749"
+                            className={`w-full px-3 py-2 rounded-lg border text-sm ${
+                              isDarkMode 
+                                ? 'bg-slate-800 border-slate-600 text-white placeholder-slate-500' 
+                                : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'
+                            } focus:ring-2 focus:ring-cyan-500 focus:border-transparent`}
+                          />
+                        </div>
+                        <div>
+                          <label className={`block text-xs font-medium mb-1 ${
+                            isDarkMode ? 'text-slate-400' : 'text-slate-600'
+                          }`}>
+                            Longitude
+                          </label>
+                          <input
+                            type="text"
+                            value={metadata.location.longitude}
+                            onChange={(e) => handleMetadataChange('location', 'longitude', e.target.value)}
+                            placeholder="e.g., -122.4194"
+                            className={`w-full px-3 py-2 rounded-lg border text-sm ${
+                              isDarkMode 
+                                ? 'bg-slate-800 border-slate-600 text-white placeholder-slate-500' 
+                                : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'
+                            } focus:ring-2 focus:ring-cyan-500 focus:border-transparent`}
+                          />
+                        </div>
+                        <div>
+                          <label className={`block text-xs font-medium mb-1 ${
+                            isDarkMode ? 'text-slate-400' : 'text-slate-600'
+                          }`}>
+                            Depth (meters)
+                          </label>
+                          <input
+                            type="text"
+                            value={metadata.location.depth}
+                            onChange={(e) => handleMetadataChange('location', 'depth', e.target.value)}
+                            placeholder="e.g., 50"
+                            className={`w-full px-3 py-2 rounded-lg border text-sm ${
+                              isDarkMode 
+                                ? 'bg-slate-800 border-slate-600 text-white placeholder-slate-500' 
+                                : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'
+                            } focus:ring-2 focus:ring-cyan-500 focus:border-transparent`}
+                          />
+                        </div>
+                        <div>
+                          <label className={`block text-xs font-medium mb-1 ${
+                            isDarkMode ? 'text-slate-400' : 'text-slate-600'
+                          }`}>
+                            Site Name
+                          </label>
+                          <input
+                            type="text"
+                            value={metadata.location.site}
+                            onChange={(e) => handleMetadataChange('location', 'site', e.target.value)}
+                            placeholder="e.g., Monterey Bay"
+                            className={`w-full px-3 py-2 rounded-lg border text-sm ${
+                              isDarkMode 
+                                ? 'bg-slate-800 border-slate-600 text-white placeholder-slate-500' 
+                                : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'
+                            } focus:ring-2 focus:ring-cyan-500 focus:border-transparent`}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Date & Time Section */}
+                    <div>
+                      <h4 className={`text-sm font-semibold mb-3 flex items-center gap-2 ${
+                        isDarkMode ? 'text-cyan-400' : 'text-blue-600'
+                      }`}>
+                        <Calendar className="w-4 h-4" />
+                        Sampling Date & Time
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className={`block text-xs font-medium mb-1 ${
+                            isDarkMode ? 'text-slate-400' : 'text-slate-600'
+                          }`}>
+                            Date
+                          </label>
+                          <input
+                            type="date"
+                            value={metadata.datetime.date}
+                            onChange={(e) => handleMetadataChange('datetime', 'date', e.target.value)}
+                            className={`w-full px-3 py-2 rounded-lg border text-sm ${
+                              isDarkMode 
+                                ? 'bg-slate-800 border-slate-600 text-white' 
+                                : 'bg-white border-slate-300 text-slate-900'
+                            } focus:ring-2 focus:ring-cyan-500 focus:border-transparent`}
+                          />
+                        </div>
+                        <div>
+                          <label className={`block text-xs font-medium mb-1 ${
+                            isDarkMode ? 'text-slate-400' : 'text-slate-600'
+                          }`}>
+                            Time
+                          </label>
+                          <input
+                            type="time"
+                            value={metadata.datetime.time}
+                            onChange={(e) => handleMetadataChange('datetime', 'time', e.target.value)}
+                            className={`w-full px-3 py-2 rounded-lg border text-sm ${
+                              isDarkMode 
+                                ? 'bg-slate-800 border-slate-600 text-white' 
+                                : 'bg-white border-slate-300 text-slate-900'
+                            } focus:ring-2 focus:ring-cyan-500 focus:border-transparent`}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Environmental Conditions */}
+                    <div>
+                      <h4 className={`text-sm font-semibold mb-3 flex items-center gap-2 ${
+                        isDarkMode ? 'text-cyan-400' : 'text-blue-600'
+                      }`}>
+                        <Thermometer className="w-4 h-4" />
+                        Environmental Conditions
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className={`block text-xs font-medium mb-1 ${
+                            isDarkMode ? 'text-slate-400' : 'text-slate-600'
+                          }`}>
+                            Temperature (°C)
+                          </label>
+                          <input
+                            type="text"
+                            value={metadata.environmental.temperature}
+                            onChange={(e) => handleMetadataChange('environmental', 'temperature', e.target.value)}
+                            placeholder="e.g., 18.5"
+                            className={`w-full px-3 py-2 rounded-lg border text-sm ${
+                              isDarkMode 
+                                ? 'bg-slate-800 border-slate-600 text-white placeholder-slate-500' 
+                                : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'
+                            } focus:ring-2 focus:ring-cyan-500 focus:border-transparent`}
+                          />
+                        </div>
+                        <div>
+                          <label className={`block text-xs font-medium mb-1 ${
+                            isDarkMode ? 'text-slate-400' : 'text-slate-600'
+                          }`}>
+                            Salinity (PSU)
+                          </label>
+                          <input
+                            type="text"
+                            value={metadata.environmental.salinity}
+                            onChange={(e) => handleMetadataChange('environmental', 'salinity', e.target.value)}
+                            placeholder="e.g., 35.0"
+                            className={`w-full px-3 py-2 rounded-lg border text-sm ${
+                              isDarkMode 
+                                ? 'bg-slate-800 border-slate-600 text-white placeholder-slate-500' 
+                                : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'
+                            } focus:ring-2 focus:ring-cyan-500 focus:border-transparent`}
+                          />
+                        </div>
+                        <div>
+                          <label className={`block text-xs font-medium mb-1 ${
+                            isDarkMode ? 'text-slate-400' : 'text-slate-600'
+                          }`}>
+                            pH
+                          </label>
+                          <input
+                            type="text"
+                            value={metadata.environmental.pH}
+                            onChange={(e) => handleMetadataChange('environmental', 'pH', e.target.value)}
+                            placeholder="e.g., 8.1"
+                            className={`w-full px-3 py-2 rounded-lg border text-sm ${
+                              isDarkMode 
+                                ? 'bg-slate-800 border-slate-600 text-white placeholder-slate-500' 
+                                : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'
+                            } focus:ring-2 focus:ring-cyan-500 focus:border-transparent`}
+                          />
+                        </div>
+                        <div>
+                          <label className={`block text-xs font-medium mb-1 ${
+                            isDarkMode ? 'text-slate-400' : 'text-slate-600'
+                          }`}>
+                            Dissolved Oxygen (mg/L)
+                          </label>
+                          <input
+                            type="text"
+                            value={metadata.environmental.dissolvedOxygen}
+                            onChange={(e) => handleMetadataChange('environmental', 'dissolvedOxygen', e.target.value)}
+                            placeholder="e.g., 7.2"
+                            className={`w-full px-3 py-2 rounded-lg border text-sm ${
+                              isDarkMode 
+                                ? 'bg-slate-800 border-slate-600 text-white placeholder-slate-500' 
+                                : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'
+                            } focus:ring-2 focus:ring-cyan-500 focus:border-transparent`}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Additional Notes */}
+                    <div>
+                      <label className={`block text-sm font-medium mb-2 ${
+                        isDarkMode ? 'text-slate-300' : 'text-slate-700'
+                      }`}>
+                        Additional Notes
+                      </label>
+                      <textarea
+                        value={metadata.notes}
+                        onChange={(e) => setMetadata({...metadata, notes: e.target.value})}
+                        placeholder="Add any additional observations or notes about the sample..."
+                        rows={3}
+                        className={`w-full px-4 py-2 rounded-lg border ${
+                          isDarkMode 
+                            ? 'bg-slate-800 border-slate-600 text-white placeholder-slate-500' 
+                            : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'
+                        } focus:ring-2 focus:ring-cyan-500 focus:border-transparent resize-none`}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* ANALYZE BUTTON WITH ENHANCED LOADING STATE */}
