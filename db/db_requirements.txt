@@ -1,0 +1,13 @@
+# Database Requirements for Taxaformer
+# Install with: pip install -r db_requirements.txt
+
+# Supabase Python client
+supabase>=2.0.0
+
+# Additional dependencies for data processing
+numpy>=1.24.0
+scipy>=1.11.0
+scikit-learn>=1.3.0
+
+# For better JSON handling
+python-dateutil>=2.8.2

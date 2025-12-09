@@ -276,12 +276,22 @@ export default function UploadPage({ isDarkMode, onNavigate }: UploadPageProps) 
       }
 
       const formData = new FormData();
-      // We send the first file in the list to the backend
-      formData.append('file', uploadedFiles[0]);
-
+      formData.append("file", uploadedFiles[0]);
+      
       // Add metadata if provided
       if (showMetadata && metadata.sampleId) {
-        formData.append('metadata', JSON.stringify(metadata));
+        formData.append("metadata", JSON.stringify({
+          sampleId: metadata.sampleId,
+          depth: metadata.location.depth ? parseFloat(metadata.location.depth) : undefined,
+          location: {
+            lat: metadata.location.latitude ? parseFloat(metadata.location.latitude) : undefined,
+            lon: metadata.location.longitude ? parseFloat(metadata.location.longitude) : undefined,
+            site: metadata.location.site
+          },
+          datetime: metadata.datetime,
+          environmental: metadata.environmental,
+          notes: metadata.notes
+        }));
       }
 
       console.log("🚀 Sending to Backend...");
@@ -363,7 +373,7 @@ export default function UploadPage({ isDarkMode, onNavigate }: UploadPageProps) 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-6">
             {/* Main Headline - Massive Typography */}
-            <h1 className={`text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-bold leading-none tracking-tight ${
+            <h1 className={`text-2xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-7xl font-bold leading-none tracking-tight ${
               isDarkMode ? 'text-white' : 'text-slate-900'
             }`}>
               <span className="block">Transform</span>
@@ -381,23 +391,22 @@ export default function UploadPage({ isDarkMode, onNavigate }: UploadPageProps) 
             <p className={`text-lg sm:text-xl md:text-2xl max-w-3xl mx-auto leading-relaxed ${
               isDarkMode ? 'text-slate-300' : 'text-slate-600'
             }`}>
-              AI-Powered biodiversity classification using Nucleotide Transformer and comprehensive marine databases
+              AI-Powered biodiversity classification using <b>Taxaformer</b> and comprehensive marine databases
             </p>
 
             {/* CTA */}
-            <div className="pt-8">
-              <a 
-                href="#upload"
-                className={`inline-flex items-center gap-2 px-8 py-4 text-lg font-semibold rounded-full transition-all ${
-                  isDarkMode
-                    ? 'bg-cyan-600 hover:bg-cyan-700 text-white shadow-lg shadow-cyan-500/30'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/30'
-                }`}
-              >
-                Upload Sequences
-                <ChevronRight className="w-5 h-5" />
-              </a>
-            </div>
+<div className="pt-8">
+  <a 
+    href="#upload"
+    className="inline-flex items-center gap-2 px-8 py-4 text-lg font-semibold rounded-full 
+               bg-black hover:bg-neutral-900 text-white 
+               shadow-lg shadow-black/30 transition-all"
+  >
+    Upload Sequences
+    <ChevronRight className="w-5 h-5" />
+  </a>
+</div>
+
           </div>
         </div>
       </div>
@@ -929,27 +938,7 @@ export default function UploadPage({ isDarkMode, onNavigate }: UploadPageProps) 
           </div>
         )}
 
-        {/* Sample Data Section */}
-        <div className={`rounded-xl p-6 ${
-          isDarkMode ? 'bg-slate-800/50' : 'bg-white/50'
-        } backdrop-blur-md`}>
-          <h3 className={`text-lg mb-4 font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-            Don't have data? Try our sample
-          </h3>
-          <p className={`text-sm mb-4 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-            Load a sample dataset to explore Taxaformer's capabilities
-          </p>
-          <button
-            onClick={() => alert("Logic for sample data loading goes here (Optional for Hackathon)")}
-            className={`px-6 py-3 rounded-lg border-2 transition-all ${
-              isDarkMode
-                ? 'border-slate-600 hover:border-cyan-400 bg-transparent hover:bg-cyan-500/10 text-slate-300 hover:text-white'
-                : 'border-slate-300 hover:border-blue-500 bg-transparent hover:bg-blue-50 text-slate-700 hover:text-blue-700'
-            }`}
-          >
-            Load Sample Data
-          </button>
-        </div>
+        
       </div>
     </div>
   );

@@ -1,8 +1,13 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Download, Share2, TrendingUp, Database } from 'lucide-react';
-import { ChartNoveltyHistogram } from './charts/ChartNoveltyHistogram';
 import { ChartTaxaAbundance } from './charts/ChartTaxaAbundance';
 import { ChartTaxonomyComposition } from './charts/ChartTaxonomyComposition';
+import { ChartTaxonomySankey } from './charts/ChartTaxonomySankey';
+import { ChartTaxonomyRainbow } from './charts/ChartTaxonomyRainbow';
+import { ChartRadarDots } from './charts/ChartRadarDots';
+import { ChartBarDefault } from './charts/ChartBarDefault';
+import { ChartPieInteractive } from './charts/ChartPieInteractive';
+import ChartAreaInteractive from './ui/chart-area-interactive.tsx';
 
 interface CSVRow {
   Sequence_ID: string;
@@ -70,6 +75,82 @@ export default function ResultsPage({ isDarkMode, onNavigate }: ResultsPageProps
     uniqueTaxa: new Set(csvData.map(row => row.Predicted_Taxonomy)).size,
     potentiallyNovel: csvData.filter(row => row.Novelty_Score > 0.15).length,
   };
+
+  // Prepare data for novelty score bar chart (using same ranges as histogram)
+  const noveltyBins = [
+    { min: 0.15, max: 0.17, label: '0.15-0.17' },
+    { min: 0.17, max: 0.19, label: '0.17-0.19' },
+    { min: 0.19, max: 0.21, label: '0.19-0.21' },
+    { min: 0.21, max: 0.23, label: '0.21-0.23' },
+    { min: 0.23, max: 0.25, label: '0.23-0.25' },
+    { min: 0.25, max: 0.31, label: '0.25+' },
+  ];
+
+  const noveltyBarData: { category: string; value: number }[] = noveltyBins.map(bin => ({
+    category: bin.label,
+    value: csvData.filter(row => {
+      const score = row.Novelty_Score;
+      // Last bin is open-ended on the upper side
+      if (bin.label === '0.25+') {
+        return score >= bin.min;
+      }
+      return score >= bin.min && score < bin.max;
+    }).length,
+  }));
+
+  // Prepare data for sequence status composition pie chart
+  const statusCounts: Record<string, number> = csvData.reduce((acc, row) => {
+    const key = row.Status && row.Status.trim().length > 0 ? row.Status.trim() : 'Unknown';
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const pieColors = ['#A855F7', '#22C55E', '#EAB308', '#3B82F6', '#F97316', '#EC4899'];
+  const totalSequences = csvData.length || 1;
+
+  const statusPieData: { name: string; value: number; color: string }[] = Object.entries(statusCounts).map(
+    ([status, count], index) => ({
+      name: `${status} (${((count / totalSequences) * 100).toFixed(1)}%)`,
+      value: count,
+      color: pieColors[index % pieColors.length],
+    })
+  );
+
+  // Prepare data for taxonomy radar chart (top phyla by sequence count)
+  const radarLevelCounts = new Map<string, number>();
+  csvData.forEach(row => {
+    const parts = row.Predicted_Taxonomy.split(';');
+    const firstPart = parts[0]?.trim() || '';
+    const secondPart = parts[1]?.trim() || '';
+
+    // CSV format: "ACCESSION Eukaryota;Amorphea;Obazoa;..."
+    // Use the second taxonomy token if available, otherwise fall back to the
+    // domain name from the first part (after removing the accession prefix).
+    let phylumPart = secondPart;
+    if (!phylumPart && firstPart) {
+      const tokens = firstPart.split(' ');
+      phylumPart = tokens.slice(1).join(' ').trim() || firstPart;
+    }
+
+    if (phylumPart) {
+      radarLevelCounts.set(phylumPart, (radarLevelCounts.get(phylumPart) || 0) + 1);
+    }
+  });
+
+  const taxonomyRadarData: { category: string; value: number }[] = Array.from(radarLevelCounts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 7)
+    .map(([name, value]) => ({
+      category: name.length > 18 ? name.substring(0, 18) + '...' : name,
+      value,
+    }));
+
+  const taxonomyRainbowData: { label: string; value: number }[] = Array.from(
+    radarLevelCounts.entries()
+  )
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([label, value]) => ({ label, value }));
 
   const handleExport = () => {
     const dataStr = JSON.stringify(csvData, null, 2);
@@ -230,40 +311,46 @@ export default function ResultsPage({ isDarkMode, onNavigate }: ResultsPageProps
 
         {/* Charts Section */}
         <div className="space-y-8">
-          {/* Novelty Score Distribution */}
+          {/* Interactive Area Chart (demo data) */}
           <div>
-            <ChartNoveltyHistogram data={csvData} isDarkMode={isDarkMode} />
+            <ChartAreaInteractive />
           </div>
 
-          {/* Taxa Abundance */}
+          {/* Sequence Status Composition Pie & Novelty Score Bar Chart */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <ChartPieInteractive
+              data={statusPieData}
+              title="Sequence Status Composition"
+              description="Percentage of sequences by status (all identified sequences)"
+              isDarkMode={isDarkMode}
+            />
+            <ChartBarDefault
+              data={noveltyBarData}
+              title="Novelty Score"
+              description="Counts of sequences in each novelty score range"
+              isDarkMode={isDarkMode}
+            />
+          </div>
+
+
+          {/* Taxonomy Classification Flow (full width) */}
           <div>
-            <ChartTaxaAbundance data={csvData} isDarkMode={isDarkMode} />
+            <ChartTaxonomySankey data={csvData} isDarkMode={isDarkMode} />
           </div>
 
-          {/* Taxonomy Composition - Multiple Levels */}
+          {/* Rainbow Taxonomy Plot & Radar Composition */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <ChartTaxonomyComposition 
-              data={csvData} 
-              level="phylum" 
-              isDarkMode={isDarkMode} 
+            <ChartTaxonomyRainbow
+              data={taxonomyRainbowData}
+              title="Taxonomic Rainbow Plot"
+              description="Radial composition of top phyla across all sequences"
+              isDarkMode={isDarkMode}
             />
-            <ChartTaxonomyComposition 
-              data={csvData} 
-              level="class" 
-              isDarkMode={isDarkMode} 
-            />
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <ChartTaxonomyComposition 
-              data={csvData} 
-              level="order" 
-              isDarkMode={isDarkMode} 
-            />
-            <ChartTaxonomyComposition 
-              data={csvData} 
-              level="kingdom" 
-              isDarkMode={isDarkMode} 
+            <ChartRadarDots
+              data={taxonomyRadarData}
+              title="Taxonomic Composition Plots"
+              description="Radar view of top phyla across all sequences"
+              isDarkMode={isDarkMode}
             />
           </div>
         </div>

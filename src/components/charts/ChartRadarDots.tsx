@@ -52,11 +52,15 @@ export function ChartRadarDots({ data, title, description, isDarkMode }: ChartRa
             <PolarGrid stroke={isDarkMode ? '#475569' : '#CBD5E1'} />
             <Radar
               dataKey="value"
-              fill="var(--color-value)"
-              fillOpacity={0.6}
+              stroke={isDarkMode ? '#A855F7' : '#7C3AED'}
+              strokeWidth={2}
+              fill={isDarkMode ? '#7C3AED' : '#6D28D9'}
+              fillOpacity={0.75}
               dot={{
                 r: 4,
-                fillOpacity: 1,
+                fill: isDarkMode ? '#C4B5FD' : '#F9FAFB',
+                stroke: isDarkMode ? '#C4B5FD' : '#EEF2FF',
+                strokeWidth: 1.5,
               }}
             />
           </RadarChart>

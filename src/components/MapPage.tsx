@@ -51,11 +51,6 @@ export default function MapPage({ isDarkMode, onNavigate }: MapPageProps) {
   const [activeLayer, setActiveLayer] = useState<'satellite' | 'ocean'>('satellite');
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [userMarkers, setUserMarkers] = useState<UserMarker[]>([]);
-  const [showModal, setShowModal] = useState(false);
-  const [pendingLocation, setPendingLocation] = useState<{ lat: number; lon: number } | null>(null);
-  const [locationName, setLocationName] = useState(''); // Where the species was found
-  const [speciesName, setSpeciesName] = useState('');
-  const [dnaInfo, setDnaInfo] = useState('');
   
   // Icon and color mapping for each location
   const getLocationStyle = (locationName: string) => {
@@ -71,14 +66,29 @@ export default function MapPage({ isDarkMode, onNavigate }: MapPageProps) {
   };
   
   const sampleLocations = [
-    { id: 1, name: 'Pacific Deep Sea', lat: 35.6, lon: -125.3, samples: 142, diversity: 'High' },
-    { id: 2, name: 'Coral Triangle', lat: -5.5, lon: 122.8, samples: 198, diversity: 'Very High' },
-    { id: 3, name: 'Mediterranean Basin', lat: 36.2, lon: 14.5, samples: 87, diversity: 'Medium' },
-    { id: 4, name: 'Great Barrier Reef', lat: -18.2, lon: 147.7, samples: 234, diversity: 'Very High' },
-    { id: 5, name: 'Caribbean Sea', lat: 18.5, lon: -78.3, samples: 156, diversity: 'High' },
-    { id: 6, name: 'Red Sea', lat: 22.0, lon: 38.5, samples: 103, diversity: 'High' },
+    { id: 1, name: 'Pacific Deep Sea', lat: 35.6, lon: -125.3, samples: 142, diversity: 'High', depth: 4200 },
+    { id: 2, name: 'Coral Triangle', lat: -5.5, lon: 122.8, samples: 198, diversity: 'Very High', depth: 850 },
+    { id: 3, name: 'Mediterranean Basin', lat: 36.2, lon: 14.5, samples: 87, diversity: 'Medium', depth: 1200 },
+    { id: 4, name: 'Great Barrier Reef', lat: -18.2, lon: 147.7, samples: 234, diversity: 'Very High', depth: 320 },
+    { id: 5, name: 'Caribbean Sea', lat: 18.5, lon: -78.3, samples: 156, diversity: 'High', depth: 2100 },
+    { id: 6, name: 'Red Sea', lat: 22.0, lon: 38.5, samples: 103, diversity: 'High', depth: 1800 },
   ];
 
+  // Function to get color based on depth
+  const getDepthColor = (depth: number) => {
+    if (depth < 500) {
+      return { gradient: 'linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%)', border: '#06b6d4', label: 'Shallow', rgb: '6, 182, 212' }; // Bright cyan
+    } else if (depth < 1500) {
+      return { gradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', border: '#2563eb', label: 'Medium Shallow', rgb: '37, 99, 235' }; // Vibrant blue
+    } else if (depth < 3000) {
+      return { gradient: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)', border: '#7c3aed', label: 'Medium', rgb: '124, 58, 237' }; // Purple
+    } else if (depth < 5000) {
+      return { gradient: 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)', border: '#db2777', label: 'Deep', rgb: '219, 39, 119' }; // Magenta/Pink
+    } else {
+      return { gradient: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)', border: '#ea580c', label: 'Very Deep', rgb: '234, 88, 12' }; // Orange-red
+    }
+  };
+  
   const featureCards = [
     {
       title: 'DNA Sequencing',
@@ -286,29 +296,32 @@ export default function MapPage({ isDarkMode, onNavigate }: MapPageProps) {
         zoomOffset: -1,
         minZoom: 1,
         maxZoom: 18,
-        attribution: '&copy; <a href="https://www.maptiler.com/copyright/" target="_blank">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap contributors</a>',
+        attribution: '&copy; <a href=\"https://www.maptiler.com/copyright/\" target=\"_blank\">MapTiler</a> &copy; <a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\">OpenStreetMap contributors</a>',
         crossOrigin: true,
       }
     ).addTo(map);
 
-    // Custom marker icon for biodiversity samples
-    const biodiversityIcon = L.divIcon({
-      className: 'custom-div-icon',
-      html: `<div style="
-        background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
-        width: 30px;
-        height: 30px;
-        border-radius: 50% 50% 50% 0;
-        transform: rotate(-45deg);
-        border: 3px solid white;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      "></div>`,
-      iconSize: [30, 30],
-      iconAnchor: [15, 30],
-    });
-
     // Add markers for each sample location and store references
     sampleLocations.forEach((location) => {
+      // Get depth-based color for this location
+      const depthColor = getDepthColor(location.depth);
+      
+      // Custom marker icon for biodiversity samples - depth colored
+      const biodiversityIcon = L.divIcon({
+        className: 'custom-div-icon',
+        html: `<div style="
+          background: ${depthColor.gradient};
+          width: 30px;
+          height: 30px;
+          border-radius: 50% 50% 50% 0;
+          transform: rotate(-45deg);
+          border: 3px solid ${depthColor.border};
+          box-shadow: 0 4px 12px rgba(0,0,0,0.3), 0 0 20px ${depthColor.border}80;
+        "></div>`,
+        iconSize: [30, 30],
+        iconAnchor: [15, 30],
+      });
+      
       const marker = L.marker([location.lat, location.lon], {
         icon: biodiversityIcon,
       }).addTo(map);
@@ -329,16 +342,16 @@ export default function MapPage({ isDarkMode, onNavigate }: MapPageProps) {
               width: 8px;
               height: 8px;
               border-radius: 50%;
-              background: #28C7E1;
-              box-shadow: 0 0 12px rgba(40, 199, 225, 0.6);
+              background: ${depthColor.border};
+              box-shadow: 0 0 12px ${depthColor.border};
             "></div>
-            <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: #FFFFFF; letter-spacing: 0.3px;">
+            <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: #000000; letter-spacing: 0.3px;">
               ${location.name}
             </h3>
           </div>
           
           <div style="margin-bottom: 12px;">
-            <div style="font-size: 11px; color: rgba(255, 255, 255, 0.6); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;">
+            <div style="font-size: 11px; color: rgba(0, 0, 0, 0.6); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;">
               Coordinates
             </div>
             <div style="font-family: 'Courier New', monospace; font-size: 13px; color: #28C7E1; font-weight: 600;">
@@ -348,33 +361,54 @@ export default function MapPage({ isDarkMode, onNavigate }: MapPageProps) {
           
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
             <div style="padding: 10px; background: rgba(255, 255, 255, 0.08); border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.12);">
-              <div style="font-size: 10px; color: rgba(255, 255, 255, 0.6); margin-bottom: 4px; text-transform: uppercase;">Samples</div>
-              <div style="font-size: 20px; font-weight: 700; color: #FFFFFF;">${location.samples}</div>
+              <div style="font-size: 10px; color: rgba(0, 0, 0, 0.6); margin-bottom: 4px; text-transform: uppercase;">Samples</div>
+              <div style="font-size: 20px; font-weight: 700; color: #000000;">${location.samples}</div>
             </div>
             <div style="padding: 10px; background: rgba(255, 255, 255, 0.08); border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.12);">
-              <div style="font-size: 10px; color: rgba(255, 255, 255, 0.6); margin-bottom: 4px; text-transform: uppercase;">Status</div>
-              <div style="
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                padding: 5px 10px;
-                border-radius: 12px;
-                font-size: 10px;
-                font-weight: 700;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-                margin-top: 2px;
-                ${
-                  location.diversity === 'Very High'
-                    ? 'background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.4); box-shadow: 0 0 8px rgba(34, 197, 94, 0.3);'
-                    : location.diversity === 'High'
-                    ? 'background: rgba(40, 199, 225, 0.2); color: #28C7E1; border: 1px solid rgba(40, 199, 225, 0.4); box-shadow: 0 0 8px rgba(40, 199, 225, 0.3);'
-                    : 'background: rgba(234, 179, 8, 0.2); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.4); box-shadow: 0 0 8px rgba(234, 179, 8, 0.3);'
-                }
-              ">
-                ${location.diversity}
-              </div>
+              <div style="font-size: 10px; color: rgba(0, 0, 0, 0.6); margin-bottom: 4px; text-transform: uppercase;">Depth</div>
+              <div style="font-size: 20px; font-weight: 700; color: #000000;">${location.depth}m</div>
             </div>
+          </div>
+          
+          <div style="margin-bottom: 12px;">
+            <div style="
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              padding: 6px 12px;
+              border-radius: 12px;
+              font-size: 10px;
+              font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              background: rgba(${depthColor.rgb}, 0.2);
+              color: ${depthColor.border};
+              border: 1px solid ${depthColor.border}40;
+              box-shadow: 0 0 8px ${depthColor.border}40;
+            ">
+              ${depthColor.label} Water
+            </div>
+          </div>
+          
+          <div style="
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5px 10px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            ${
+              location.diversity === 'Very High'
+                ? 'background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.4); box-shadow: 0 0 8px rgba(34, 197, 94, 0.3);'
+                : location.diversity === 'High'
+                ? 'background: rgba(40, 199, 225, 0.2); color: #28C7E1; border: 1px solid rgba(40, 199, 225, 0.4); box-shadow: 0 0 8px rgba(40, 199, 225, 0.3);'
+                : 'background: rgba(234, 179, 8, 0.2); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.4); box-shadow: 0 0 8px rgba(234, 179, 8, 0.3);'
+            }
+          ">
+            ${location.diversity} Biodiversity
           </div>
         </div>
       `;
@@ -399,16 +433,6 @@ export default function MapPage({ isDarkMode, onNavigate }: MapPageProps) {
         radius: 500000, // 500km radius
         weight: 2,
       }).addTo(map);
-    });
-
-    // Add click event listener to map for adding custom markers
-    map.on('click', (e: L.LeafletMouseEvent) => {
-      const { lat, lng } = e.latlng;
-      setPendingLocation({ lat, lon: lng });
-      setShowModal(true);
-      setLocationName('');
-      setSpeciesName('');
-      setDnaInfo('');
     });
 
     setIsMapLoaded(true);
@@ -476,96 +500,7 @@ export default function MapPage({ isDarkMode, onNavigate }: MapPageProps) {
     }, 500);
   };
 
-  const handleConfirmMarker = () => {
-    if (!pendingLocation) return;
 
-    const newMarker: UserMarker = {
-      id: Date.now().toString(),
-      lat: pendingLocation.lat,
-      lon: pendingLocation.lon,
-      locationName: locationName || 'Unknown Location', // Add a default location name
-      speciesName: speciesName || 'Unknown Species',
-      dnaInfo: dnaInfo || 'No DNA info provided',
-      timestamp: new Date(),
-    };
-
-    setUserMarkers([...userMarkers, newMarker]);
-
-    // Create custom user marker icon (green pin)
-    const userMarkerIcon = L.divIcon({
-      className: 'custom-div-icon',
-      html: `<div style="
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        width: 30px;
-        height: 30px;
-        border-radius: 50% 50% 50% 0;
-        transform: rotate(-45deg);
-        border: 3px solid white;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      "></div>`,
-      iconSize: [30, 30],
-      iconAnchor: [15, 30],
-    });
-
-    const marker = L.marker([pendingLocation.lat, pendingLocation.lon], {
-      icon: userMarkerIcon,
-    }).addTo(mapRef.current!);
-
-    const popupContent = `
-      <div style="
-        font-family: system-ui; 
-        min-width: 250px;
-        padding: 18px;
-        background: transparent;
-      ">
-        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.15);">
-          <div style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 12px rgba(16, 185, 129, 0.6);"></div>
-          <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: #FFFFFF; letter-spacing: 0.3px;">
-            User Sample
-          </h3>
-        </div>
-        
-        <div style="margin-bottom: 10px; padding: 8px; background: rgba(255, 255, 255, 0.08); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.12);">
-          <div style="font-size: 11px; color: rgba(255, 255, 255, 0.6); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.5px;">Location</div>
-          <div style="font-size: 13px; color: #FFFFFF; font-weight: 600;">${newMarker.locationName}</div>
-        </div>
-        
-        <div style="margin-bottom: 10px; padding: 8px; background: rgba(255, 255, 255, 0.08); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.12);">
-          <div style="font-size: 11px; color: rgba(255, 255, 255, 0.6); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.5px;">Species</div>
-          <div style="font-size: 13px; color: #FFFFFF; font-weight: 600; font-style: italic;">${newMarker.speciesName}</div>
-        </div>
-        
-        <div style="margin-bottom: 10px; padding: 8px; background: rgba(255, 255, 255, 0.08); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.12);">
-          <div style="font-size: 11px; color: rgba(255, 255, 255, 0.6); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.5px;">DNA Info</div>
-          <div style="font-size: 12px; color: rgba(255, 255, 255, 0.9);">${newMarker.dnaInfo}</div>
-        </div>
-        
-        <div style="padding: 8px; background: rgba(255, 255, 255, 0.05); border-radius: 8px;">
-          <div style="font-size: 10px; color: rgba(255, 255, 255, 0.5); margin-bottom: 2px;">Coordinates</div>
-          <div style="font-family: 'Courier New', monospace; font-size: 11px; color: #28C7E1;">${pendingLocation.lat.toFixed(4)}°, ${pendingLocation.lon.toFixed(4)}°</div>
-          <div style="font-size: 10px; color: rgba(255, 255, 255, 0.5); margin-top: 4px;">Added: ${newMarker.timestamp.toLocaleString()}</div>
-        </div>
-      </div>
-    `;
-
-    marker.bindPopup(popupContent);
-    marker.openPopup();
-
-    // Reset modal state
-    setShowModal(false);
-    setPendingLocation(null);
-    setLocationName('');
-    setSpeciesName('');
-    setDnaInfo('');
-  };
-
-  const handleCancelMarker = () => {
-    setShowModal(false);
-    setPendingLocation(null);
-    setLocationName('');
-    setSpeciesName('');
-    setDnaInfo('');
-  };
 
   const addUserMarker = (lat: number, lon: number) => {
     const newMarker: UserMarker = {
@@ -667,93 +602,6 @@ export default function MapPage({ isDarkMode, onNavigate }: MapPageProps) {
               className="w-full h-[600px] md:h-[700px]"
               style={{ background: isDarkMode ? '#1e293b' : '#f1f5f9' }}
             />
-            
-            {/* Find My Location Button - Top Right */}
-            <button
-              onClick={() => {
-                if (mapRef.current && navigator.geolocation) {
-                  navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                      const { latitude, longitude } = position.coords;
-                      mapRef.current?.flyTo([latitude, longitude], 8, {
-                        duration: 1.5
-                      });
-                      
-                      const userLocationIcon = L.divIcon({
-                        className: 'custom-div-icon',
-                        html: `<div style="background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%); width: 30px; height: 30px; border-radius: 50%; border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: flex; align-items: center; justify-center;"><div style="width: 8px; height: 8px; background: white; border-radius: 50%;"></div></div>`,
-                        iconSize: [30, 30],
-                        iconAnchor: [15, 15],
-                      });
-
-                      const marker = L.marker([latitude, longitude], {
-                        icon: userLocationIcon,
-                      }).addTo(mapRef.current!);
-
-                      marker.bindPopup(`
-                        <div style="
-                          font-family: system-ui; 
-                          min-width: 220px;
-                          padding: 18px;
-                          background: transparent;
-                        ">
-                          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.15);">
-                            <div style="width: 8px; height: 8px; border-radius: 50%; background: #28C7E1; box-shadow: 0 0 12px rgba(40, 199, 225, 0.6);"></div>
-                            <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: #FFFFFF; letter-spacing: 0.3px;">
-                              Your Location
-                            </h3>
-                          </div>
-                          <div style="margin-bottom: 8px;">
-                            <div style="font-size: 11px; color: rgba(255, 255, 255, 0.6); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;">
-                              Coordinates
-                            </div>
-                            <div style="font-family: 'Courier New', monospace; font-size: 13px; color: #28C7E1; font-weight: 600;">
-                              ${latitude.toFixed(4)}° N, ${longitude.toFixed(4)}° E
-                            </div>
-                          </div>
-                          <div style="font-size: 12px; color: rgba(255, 255, 255, 0.7); padding: 8px; background: rgba(255, 255, 255, 0.08); border-radius: 8px; margin-top: 10px;">
-                            Click anywhere on the map to add a species marker
-                          </div>
-                        </div>
-                      `).openPopup();
-                    },
-                    (error) => {
-                      let errorMessage = 'Unable to retrieve your location. ';
-                      
-                      switch(error.code) {
-                        case error.PERMISSION_DENIED:
-                          errorMessage += 'Please enable location permissions in your browser settings.';
-                          break;
-                        case error.POSITION_UNAVAILABLE:
-                          errorMessage += 'Location information is unavailable.';
-                          break;
-                        case error.TIMEOUT:
-                          errorMessage += 'The request to get your location timed out.';
-                          break;
-                        default:
-                          errorMessage += 'An unknown error occurred.';
-                      }
-                      
-                      // Silently handle geolocation errors in production
-                      // Only show alert if explicitly denied by user
-                      if (error.code === error.PERMISSION_DENIED) {
-                        alert(errorMessage);
-                      }
-                    }
-                  );
-                } else {
-                  alert('Geolocation is not supported by your browser.');
-                }
-              }}
-              className={`absolute top-6 right-6 z-[1000] px-5 py-3 rounded-xl font-bold transition-all shadow-lg flex items-center gap-2 ${
-                isDarkMode 
-                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white hover:from-cyan-500 hover:to-blue-500' 
-                  : 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:from-cyan-600 hover:to-blue-600'
-              }`}
-            >
-              <Crosshair className="w-5 h-5" />
-              Find My Location
-            </button>
 
             {/* Map Legend - Bottom Left - Darker Glassmorphism */}
             <div style={{
@@ -805,23 +653,6 @@ export default function MapPage({ isDarkMode, onNavigate }: MapPageProps) {
                   <div style={{
                     width: '22px',
                     height: '22px',
-                    borderRadius: '50% 50% 50% 0',
-                    transform: 'rotate(-45deg)',
-                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                    border: '1.5px solid rgba(16, 185, 129, 0.5)',
-                    boxShadow: '0 0 16px rgba(16, 185, 129, 0.6), inset 0 1px 2px rgba(255, 255, 255, 0.2)'
-                  }}></div>
-                  <span style={{ 
-                    fontSize: '13px', 
-                    color: 'rgba(255, 255, 255, 0.95)', 
-                    fontWeight: '500',
-                    letterSpacing: '0.2px'
-                  }}>User Markers</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{
-                    width: '22px',
-                    height: '22px',
                     borderRadius: '50%',
                     border: '2px solid #06b6d4',
                     background: 'rgba(6, 182, 212, 0.15)',
@@ -835,6 +666,143 @@ export default function MapPage({ isDarkMode, onNavigate }: MapPageProps) {
                   }}>Coverage Area</span>
                 </div>
               </div>
+            </div>
+
+            {/* Depth Legend - Bottom Right */}
+            <div style={{
+              position: 'absolute',
+              bottom: '24px',
+              right: '24px',
+              zIndex: 1000,
+              background: isDarkMode 
+                ? 'rgba(15, 23, 42, 0.85)' 
+                : 'rgba(30, 41, 59, 0.85)',
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
+              borderRadius: '12px',
+              padding: '18px 20px',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+              border: '1px solid rgba(148, 163, 184, 0.2)',
+              transition: 'all 0.3s ease',
+              minWidth: '200px'
+            }}>
+              <h4 style={{ 
+                margin: '0 0 14px 0', 
+                fontSize: '12px', 
+                fontWeight: '600', 
+                color: 'rgba(255, 255, 255, 0.6)',
+                textTransform: 'uppercase',
+                letterSpacing: '1px'
+              }}>
+                Water Depth
+              </h4>
+              
+              {/* Depth Gradient Bar */}
+              <div style={{
+                height: '12px',
+                borderRadius: '8px',
+                background: 'linear-gradient(90deg, #22d3ee 0%, #3b82f6 20%, #8b5cf6 40%, #ec4899 70%, #f97316 100%)',
+                marginBottom: '16px',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.1)'
+              }}></div>
+              
+              {/* Depth Labels */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {[
+                  { label: 'Shallow', range: '< 500m', color: '#22d3ee' },
+                  { label: 'Medium Shallow', range: '500-1500m', color: '#3b82f6' },
+                  { label: 'Medium', range: '1500-3000m', color: '#8b5cf6' },
+                  { label: 'Deep', range: '3000-5000m', color: '#ec4899' },
+                  { label: 'Very Deep', range: '> 5000m', color: '#f97316' }
+                ].map((item, idx) => (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{
+                      width: '14px',
+                      height: '14px',
+                      borderRadius: '3px',
+                      background: item.color,
+                      boxShadow: `0 0 10px ${item.color}60`,
+                      border: '1px solid rgba(255, 255, 255, 0.2)'
+                    }}></div>
+                    <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ 
+                        fontSize: '11px', 
+                        color: 'rgba(255, 255, 255, 0.9)', 
+                        fontWeight: '500',
+                        letterSpacing: '0.2px'
+                      }}>{item.label}</span>
+                      <span style={{ 
+                        fontSize: '10px', 
+                        color: 'rgba(255, 255, 255, 0.6)', 
+                        fontFamily: "'Courier New', monospace",
+                        fontWeight: '600'
+                      }}>{item.range}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Depth Heat Map Toggle - Top Right */}
+            <div style={{
+              position: 'absolute',
+              top: '24px',
+              right: '24px',
+              zIndex: 1000,
+            }}>
+              <button
+                onClick={() => handleLayerChange(activeLayer === 'ocean' ? 'satellite' : 'ocean')}
+                style={{
+                  background: activeLayer === 'ocean'
+                    ? 'linear-gradient(135deg, #0891B2 0%, #06B6D4 100%)'
+                    : isDarkMode 
+                      ? 'rgba(15, 23, 42, 0.85)' 
+                      : 'rgba(30, 41, 59, 0.85)',
+                  backdropFilter: 'blur(16px)',
+                  WebkitBackdropFilter: 'blur(16px)',
+                  borderRadius: '10px',
+                  padding: '12px 20px',
+                  boxShadow: activeLayer === 'ocean'
+                    ? '0 8px 32px rgba(8, 145, 178, 0.5), 0 0 20px rgba(6, 182, 212, 0.4)' 
+                    : '0 8px 32px rgba(0, 0, 0, 0.4)',
+                  border: activeLayer === 'ocean'
+                    ? '1px solid rgba(6, 182, 212, 0.5)' 
+                    : '1px solid rgba(148, 163, 184, 0.2)',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  color: '#FFFFFF',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  letterSpacing: '0.3px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+                onMouseEnter={(e) => {
+                  if (activeLayer !== 'ocean') {
+                    e.currentTarget.style.background = 'rgba(15, 23, 42, 0.95)';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 12px 40px rgba(0, 0, 0, 0.5)';
+                  } else {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (activeLayer !== 'ocean') {
+                    e.currentTarget.style.background = isDarkMode 
+                      ? 'rgba(15, 23, 42, 0.85)' 
+                      : 'rgba(30, 41, 59, 0.85)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.4)';
+                  } else {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }
+                }}
+              >
+                <Layers style={{ width: '18px', height: '18px' }} />
+                {activeLayer === 'ocean' ? 'Hide Depth Heat Map' : 'Show Depth Heat Map'}
+              </button>
             </div>
           </div>
         </div>
@@ -1221,133 +1189,6 @@ export default function MapPage({ isDarkMode, onNavigate }: MapPageProps) {
           </div>
         </div>
       </div>
-
-      {/* Add Marker Modal */}
-      {showModal && pendingLocation && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
-          <div 
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={handleCancelMarker}
-          />
-          
-          <div className={`relative rounded-xl p-6 max-w-md w-full ${
-            isDarkMode ? 'bg-slate-800' : 'bg-white'
-          } shadow-2xl`}>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600">
-                  <Plus className="w-5 h-5 text-white" />
-                </div>
-                <h3 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                  Add Sample Marker
-                </h3>
-              </div>
-              <button
-                onClick={handleCancelMarker}
-                className={`p-2 rounded-lg ${
-                  isDarkMode ? 'hover:bg-slate-700' : 'hover:bg-slate-100'
-                } transition-colors`}
-              >
-                <X className={`w-5 h-5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`} />
-              </button>
-            </div>
-
-            <div className={`mb-4 p-3 rounded-lg ${
-              isDarkMode ? 'bg-slate-700/50' : 'bg-slate-100'
-            }`}>
-              <div className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                <div className="flex items-center gap-2 mb-1">
-                  <MapPin className="w-4 h-4" />
-                  <span>Selected Location:</span>
-                </div>
-                <div className={`font-mono text-xs ${isDarkMode ? 'text-cyan-400' : 'text-blue-600'}`}>
-                  Lat: {pendingLocation.lat.toFixed(6)}°, Lon: {pendingLocation.lon.toFixed(6)}°
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4 mb-6">
-              <div>
-                <label className={`block text-sm mb-2 font-bold ${
-                  isDarkMode ? 'text-white' : 'text-slate-900'
-                }`}>
-                  Location Name
-                </label>
-                <input
-                  type="text"
-                  value={locationName}
-                  onChange={(e) => setLocationName(e.target.value)}
-                  placeholder="e.g., Pacific Ocean"
-                  className={`w-full px-4 py-2.5 rounded-lg border ${
-                    isDarkMode 
-                      ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-400' 
-                      : 'bg-white border-slate-300 text-slate-900 placeholder-slate-500'
-                  } focus:outline-none focus:ring-2 focus:ring-cyan-500`}
-                />
-              </div>
-
-              <div>
-                <label className={`block text-sm mb-2 font-bold ${
-                  isDarkMode ? 'text-white' : 'text-slate-900'
-                }`}>
-                  Species Name
-                </label>
-                <input
-                  type="text"
-                  value={speciesName}
-                  onChange={(e) => setSpeciesName(e.target.value)}
-                  placeholder="e.g., Octopus vulgaris"
-                  className={`w-full px-4 py-2.5 rounded-lg border ${
-                    isDarkMode 
-                      ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-400' 
-                      : 'bg-white border-slate-300 text-slate-900 placeholder-slate-500'
-                  } focus:outline-none focus:ring-2 focus:ring-cyan-500`}
-                  autoFocus
-                />
-              </div>
-
-              <div>
-                <label className={`block text-sm mb-2 font-bold ${
-                  isDarkMode ? 'text-white' : 'text-slate-900'
-                }`}>
-                  DNA Information
-                </label>
-                <textarea
-                  value={dnaInfo}
-                  onChange={(e) => setDnaInfo(e.target.value)}
-                  placeholder="e.g., 18S rRNA, COI gene sequence"
-                  rows={3}
-                  className={`w-full px-4 py-2.5 rounded-lg border ${
-                    isDarkMode 
-                      ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-400' 
-                      : 'bg-white border-slate-300 text-slate-900 placeholder-slate-500'
-                  } focus:outline-none focus:ring-2 focus:ring-cyan-500 resize-none`}
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={handleCancelMarker}
-                className={`flex-1 px-4 py-2.5 rounded-lg font-bold transition-all ${
-                  isDarkMode
-                    ? 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                    : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
-                }`}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmMarker}
-                className="flex-1 px-4 py-2.5 rounded-lg font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 transition-all flex items-center justify-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                Add Marker
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

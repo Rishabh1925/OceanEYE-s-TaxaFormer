@@ -1,6 +1,7 @@
 "use client"
 
 import { TrendingUp } from "lucide-react"
+import type { CSSProperties } from "react"
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts"
 
 import {
@@ -28,11 +29,13 @@ interface ChartAreaGradientProps {
 const chartConfig = {
   confidence: {
     label: "Confidence",
-    color: "var(--chart-1)",
+    // Lighter violet for typically larger series
+    color: "#C4B5FD",
   },
   overlap: {
     label: "Overlap",
-    color: "var(--chart-2)",
+    // Darker violet for typically smaller series
+    color: "#A855F7",
   },
 } satisfies ChartConfig
 
@@ -64,30 +67,62 @@ export function ChartAreaGradient({ data, title, description, isDarkMode }: Char
               stroke={isDarkMode ? '#94A3B8' : '#64748B'}
               tickFormatter={(value) => value.slice(0, 3)}
             />
-            <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+            <ChartTooltip
+              cursor={false}
+              content={
+                <ChartTooltipContent
+                  className="w-[220px]"
+                  indicator="dot"
+                  formatter={(value, name, item, index) => (
+                    <>
+                      <div
+                        className="h-2.5 w-2.5 shrink-0 rounded-[2px] bg-(--color-bg)"
+                        style={
+                          {
+                            "--color-bg": `var(--color-${name})`,
+                          } as CSSProperties
+                        }
+                      />
+                      {chartConfig[name as keyof typeof chartConfig]?.label || name}
+                      <div className="text-foreground ml-auto flex items-baseline gap-0.5 font-mono font-medium tabular-nums">
+                        {value}
+                      </div>
+                      {index === 1 && (
+                        <div className="text-foreground mt-1.5 flex basis-full items-center border-t pt-1.5 text-xs font-medium">
+                          Total
+                          <div className="text-foreground ml-auto flex items-baseline gap-0.5 font-mono font-medium tabular-nums">
+                            {item.payload.confidence + item.payload.overlap}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                />
+              }
+            />
             <defs>
               <linearGradient id="fillConfidence" x1="0" y1="0" x2="0" y2="1">
                 <stop
                   offset="5%"
-                  stopColor="var(--color-confidence)"
-                  stopOpacity={0.8}
+                  stopColor="#C4B5FD"
+                  stopOpacity={0.6}
                 />
                 <stop
                   offset="95%"
-                  stopColor="var(--color-confidence)"
-                  stopOpacity={0.1}
+                  stopColor="#C4B5FD"
+                  stopOpacity={0.06}
                 />
               </linearGradient>
               <linearGradient id="fillOverlap" x1="0" y1="0" x2="0" y2="1">
                 <stop
                   offset="5%"
-                  stopColor="var(--color-overlap)"
-                  stopOpacity={0.8}
+                  stopColor="#A855F7"
+                  stopOpacity={0.6}
                 />
                 <stop
                   offset="95%"
-                  stopColor="var(--color-overlap)"
-                  stopOpacity={0.1}
+                  stopColor="#A855F7"
+                  stopOpacity={0.06}
                 />
               </linearGradient>
             </defs>
@@ -95,16 +130,16 @@ export function ChartAreaGradient({ data, title, description, isDarkMode }: Char
               dataKey="overlap"
               type="natural"
               fill="url(#fillOverlap)"
-              fillOpacity={0.4}
-              stroke="var(--color-overlap)"
+              fillOpacity={0.35}
+              stroke="#A855F7"
               stackId="a"
             />
             <Area
               dataKey="confidence"
               type="natural"
               fill="url(#fillConfidence)"
-              fillOpacity={0.4}
-              stroke="var(--color-confidence)"
+              fillOpacity={0.35}
+              stroke="#C4B5FD"
               stackId="a"
             />
           </AreaChart>

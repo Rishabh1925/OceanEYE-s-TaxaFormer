@@ -334,68 +334,68 @@ export default function OutputPage({ isDarkMode, onNavigate }: OutputPageProps) 
         {/* Secondary Grid */}
         <div className="grid lg:grid-cols-2 gap-8 mb-8">
           
-          {/* Novel Species Detected Panel - UPDATED */}
+          {/* Novel Species Detection Panel */}
           <GlareHover
-            glareColor={isDarkMode ? "#A78BFA" : "#8B5CF6"}
-            glareOpacity={0.35}
+            glareColor={isDarkMode ? "#94A3B8" : "#334155"} 
+            glareOpacity={0.3}
             glareAngle={-35}
             glareSize={300}
             transitionDuration={750}
             playOnce={false}
-            borderColor={isDarkMode ? '#334155' : '#475569'} // Changed border to neutral slate
+            borderColor={isDarkMode ? '#b9c4d4ff' : '#CBD5E1'}
             borderRadius="1rem"
           >
             <div className={`p-6 rounded-2xl backdrop-blur-md h-full ${
-              isDarkMode ? 'bg-black border-slate-800' : 'bg-slate-950 border-slate-800' // Changed to Black/Dark Slate
-            } border-2`}>
+              isDarkMode ? 'bg-slate-800/50' : 'bg-white/50'
+            } border-2 ${isDarkMode ? 'border-slate-700' : 'border-slate-200'}`}>
               <div className="flex items-center gap-3 mb-6">
-                <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-slate-800' : 'bg-slate-800'}`}>
-                  <Sparkles className={`w-5 h-5 ${isDarkMode ? 'text-purple-400' : 'text-purple-400'}`} />
+                <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-slate-700' : 'bg-black/5'}`}>
+                  <Sparkles className={`w-5 h-5 ${isDarkMode ? 'text-white' : 'text-slate-900'}`} />
                 </div>
-                <h2 className={`font-bold ${isDarkMode ? 'text-white' : 'text-white'}`}>
+                <h2 className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                   Novel Species Detected
                 </h2>
               </div>
 
               <div className="text-center py-8">
-                {/* DYNAMIC COUNT APPLIED HERE */}
-                <div className={`text-6xl mb-4 font-bold ${isDarkMode ? 'text-purple-400' : 'text-purple-400'}`}>
+                {/* DYNAMIC COUNT */}
+                <div className={`text-6xl mb-4 font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                   {stats.novelCount}
                 </div>
-                <p className={`text-sm mb-8 ${isDarkMode ? 'text-slate-400' : 'text-slate-400'}`}>
+                <p className={`text-sm mb-8 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                   Unassigned sequences found
                 </p>
                 
-                <div className={`p-4 rounded-lg mb-6 ${isDarkMode ? 'bg-slate-900' : 'bg-slate-900'} border border-slate-800`}>
-                  <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-400'}`}>
+                <div className={`p-4 rounded-lg mb-6 ${isDarkMode ? 'bg-slate-900/50' : 'bg-slate-100/80'}`}>
+                  <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                     These sequences do not match PR2/SILVA references. Detected using transformer embeddings + clustering analysis.
                   </p>
                 </div>
 
                 <button className={`w-full py-3 rounded-lg font-semibold transition-all transform hover:scale-105 ${
                   isDarkMode
-                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-500 hover:to-pink-500'
-                    : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-500 hover:to-pink-500'
+                    ? 'bg-white text-black hover:bg-slate-200' 
+                    : 'bg-black text-white hover:bg-slate-800'
                 } shadow-lg`}>
                   View Novel Clusters
                 </button>
               </div>
 
-              <div className={`mt-6 p-4 rounded-lg ${isDarkMode ? 'bg-slate-900' : 'bg-slate-900'} border border-slate-800`}>
+              <div className={`mt-6 p-4 rounded-lg ${isDarkMode ? 'bg-slate-900/30' : 'bg-slate-100/50'}`}>
                 <div className="flex items-center gap-2 mb-2">
-                  <AlertCircle className={`w-4 h-4 ${isDarkMode ? 'text-cyan-400' : 'text-cyan-400'}`} />
-                  <span className={`text-xs font-semibold ${isDarkMode ? 'text-white' : 'text-white'}`}>
+                  <AlertCircle className={`w-4 h-4 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`} />
+                  <span className={`text-xs font-semibold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                     Novelty Metrics
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-xs">
                   <div>
-                    <p className={isDarkMode ? 'text-slate-400' : 'text-slate-400'}>Novel Sequences</p>
-                    <p className={`font-semibold ${isDarkMode ? 'text-white' : 'text-white'}`}>{stats.novelCount}</p>
+                    <p className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>Novel Sequences</p>
+                    <p className={`font-semibold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{stats.novelCount}</p>
                   </div>
                   <div>
-                    <p className={isDarkMode ? 'text-slate-400' : 'text-slate-400'}>Novel Rate</p>
-                    <p className={`font-semibold ${isDarkMode ? 'text-white' : 'text-white'}`}>{stats.total > 0 ? ((stats.novelCount / stats.total) * 100).toFixed(1) : 0}%</p>
+                    <p className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>Novel Rate</p>
+                    <p className={`font-semibold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{stats.total > 0 ? ((stats.novelCount / stats.total) * 100).toFixed(1) : 0}%</p>
                   </div>
                 </div>
               </div>
@@ -645,146 +645,6 @@ export default function OutputPage({ isDarkMode, onNavigate }: OutputPageProps) 
                 })()}
               </div>
             </div>
-          </div>
-        </GlareHover>
-
-        {/* Cluster Visualization Panel */}
-        <GlareHover
-          glareColor={isDarkMode ? "#60A5FA" : "#3B82F6"}
-          glareOpacity={0.25}
-          glareAngle={-30}
-          glareSize={350}
-          transitionDuration={800}
-          playOnce={false}
-          borderColor={isDarkMode ? '#334155' : '#BFDBFE'}
-          borderRadius="1rem"
-        >
-          <div className={`p-6 rounded-2xl backdrop-blur-md mb-8 ${
-            isDarkMode ? 'bg-slate-800/50' : 'bg-white/50'
-          }`}>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                Cluster Visualization
-              </h2>
-              
-              <div className={`flex gap-2 p-1 rounded-lg ${
-                isDarkMode ? 'bg-slate-700/60' : 'bg-white/60'
-              }`}>
-                <button 
-                  onClick={() => setSelectedTab('embedding')}
-                  className={`px-4 py-2 rounded text-sm font-semibold transition-all ${
-                    selectedTab === 'embedding'
-                      ? isDarkMode 
-                        ? 'bg-cyan-600 text-white' 
-                        : 'bg-cyan-600 text-white'
-                      : isDarkMode 
-                        ? 'text-slate-400 hover:text-white' 
-                        : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  Cluster Details
-                </button>
-              </div>
-            </div>
-
-            {selectedTab === 'embedding' ? (
-              <div className="h-96">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-                    <XAxis 
-                      type="number" 
-                      dataKey="x" 
-                      name="UMAP-1"
-                      stroke={isDarkMode ? '#94A3B8' : '#64748B'}
-                    />
-                    <YAxis 
-                      type="number" 
-                      dataKey="y" 
-                      name="UMAP-2"
-                      stroke={isDarkMode ? '#94A3B8' : '#64748B'}
-                    />
-                    <ZAxis type="number" dataKey="z" range={[60, 400]} name="Count" />
-                    <Tooltip 
-                      cursor={{ strokeDasharray: '3 3' }}
-                      contentStyle={{
-                        backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
-                        border: `1px solid ${isDarkMode ? '#475569' : '#e2e8f0'}`,
-                        borderRadius: '8px'
-                      }}
-                    />
-                    <Legend />
-                    <Scatter name="Sequences" data={clusterData} fill="#8884d8">
-                      {clusterData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Scatter>
-                  </ScatterChart>
-                </ResponsiveContainer>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {clusterData.slice(0, 4).map((cluster, idx) => (
-                  <div 
-                    key={idx}
-                    className={`p-4 rounded-lg ${
-                      isDarkMode ? 'bg-slate-700/40' : 'bg-white/60'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <div 
-                          className="w-4 h-4 rounded-full"
-                          style={{ backgroundColor: cluster.color }}
-                        ></div>
-                        <span className={`font-semibold ${
-                          isDarkMode ? 'text-white' : 'text-slate-900'
-                        }`}>
-                          {cluster.cluster}
-                        </span>
-                      </div>
-                      <span className={`text-sm ${
-                        isDarkMode ? 'text-slate-400' : 'text-slate-600'
-                      }`}>
-                        {cluster.z} sequences
-                      </span>
-                    </div>
-                    
-                    <div className="grid grid-cols-3 gap-4 text-xs">
-                      <div>
-                        <p className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>
-                          Dominant Lineage
-                        </p>
-                        <p className={`font-semibold mt-1 ${
-                          isDarkMode ? 'text-white' : 'text-slate-900'
-                        }`}>
-                          {cluster.cluster}
-                        </p>
-                      </div>
-                      <div>
-                        <p className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>
-                          Avg. Confidence
-                        </p>
-                        <p className={`font-semibold mt-1 ${
-                          isDarkMode ? 'text-white' : 'text-slate-900'
-                        }`}>
-                          {(Math.random() * 0.3 + 0.7).toFixed(2)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>
-                          Novelty Score
-                        </p>
-                        <p className={`font-semibold mt-1 ${
-                          isDarkMode ? 'text-white' : 'text-slate-900'
-                        }`}>
-                          {cluster.cluster === 'Unknown' ? '92%' : `${Math.floor(Math.random() * 30)}%`}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </GlareHover>
 
@@ -1095,19 +955,7 @@ export default function OutputPage({ isDarkMode, onNavigate }: OutputPageProps) 
           </div>
         </GlareHover>
 
-        
-
-        {/* Footer Credits */}
-        <div className={`p-6 rounded-2xl backdrop-blur-md text-center ${
-          isDarkMode ? 'bg-slate-800/30 border border-slate-700' : 'bg-white/30 border border-blue-200'
-        }`}>
-          <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-            <span className="font-semibold">CMLRE · Ministry of Earth Sciences</span>
-            <br />
-            Powered by AI-based Deep-Sea Biodiversity Analysis Pipeline
-          </p>
-        </div>
-      </div>
+      
 
       {/* Sequence Inspection Drawer */}
       {selectedSequence && (

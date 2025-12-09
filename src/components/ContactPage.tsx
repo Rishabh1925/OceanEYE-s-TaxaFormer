@@ -151,12 +151,12 @@ export default function ContactPage({ isDarkMode, onNavigate }: ContactPageProps
                     Send us an email anytime
                   </p>
                   <a
-                    href="mailto:contact@taxaformer.io"
+                    href="mailto:contact.taxaformer@gmail.com"
                     className={`${
                       isDarkMode ? 'text-cyan-400 hover:text-cyan-300' : 'text-blue-600 hover:text-blue-700'
                     }`}
                   >
-                    contact@taxaformer.io
+                    contact.taxaformer@gmail.com
                   </a>
                 </div>
               </div>
@@ -186,14 +186,14 @@ export default function ContactPage({ isDarkMode, onNavigate }: ContactPageProps
                     Check out our code and contribute
                   </p>
                   <a
-                    href="https://github.com/taxaformer"
+                    href="https://github.com/Shaurya-Sinha3301/Taxaformer-Final"
                     target="_blank"
                     rel="noopener noreferrer"
                     className={`${
                       isDarkMode ? 'text-cyan-400 hover:text-cyan-300' : 'text-blue-600 hover:text-blue-700'
                     }`}
                   >
-                    github.com/taxaformer
+                    github.com/Taxaformer
                   </a>
                 </div>
               </div>
@@ -228,7 +228,7 @@ export default function ContactPage({ isDarkMode, onNavigate }: ContactPageProps
                       isDarkMode ? 'text-cyan-400 hover:text-cyan-300' : 'text-blue-600 hover:text-blue-700'
                     }`}
                   >
-                    docs.taxaformer.io
+                    Google Docs
                   </a>
                 </div>
               </div>
