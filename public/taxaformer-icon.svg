@@ -1,0 +1,17 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Ocean wave background -->
+  <rect width="32" height="32" rx="6" fill="#0EA5E9"/>
+  
+  <!-- DNA helix representation -->
+  <path d="M8 8C12 12 20 12 24 8" stroke="white" stroke-width="2" fill="none"/>
+  <path d="M8 16C12 12 20 12 24 16" stroke="white" stroke-width="2" fill="none"/>
+  <path d="M8 24C12 20 20 20 24 24" stroke="white" stroke-width="2" fill="none"/>
+  
+  <!-- DNA base pairs -->
+  <circle cx="10" cy="10" r="1.5" fill="white"/>
+  <circle cx="22" cy="10" r="1.5" fill="white"/>
+  <circle cx="10" cy="14" r="1.5" fill="white"/>
+  <circle cx="22" cy="14" r="1.5" fill="white"/>
+  <circle cx="10" cy="22" r="1.5" fill="white"/>
+  <circle cx="22" cy="22" r="1.5" fill="white"/>
+</svg>
