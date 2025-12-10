@@ -2,6 +2,8 @@
 
 Transform environmental DNA sequences into biodiversity insights using Nucleotide Transformer AI.
 
+🚀 **Latest Update**: Fixed all TypeScript build errors for Vercel deployment
+
 ## 🌊 Features
 
 - **Nucleotide Transformer AI** - State-of-the-art deep learning for taxonomic classification
