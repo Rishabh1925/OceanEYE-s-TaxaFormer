@@ -593,8 +593,8 @@ function HomePage({ isDarkMode, onNavigate, handleScrollTo, handleUpload, handle
   return (
     <>
       {/* Hero Section */}
-      <div className="relative overflow-hidden pt-8">
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+      <div className="relative overflow-hidden pt-2">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
           <div className="relative">
             <div className="space-y-2 md:space-y-4 text-center">
               <div className="flex items-center justify-center gap-4 md:gap-6">
