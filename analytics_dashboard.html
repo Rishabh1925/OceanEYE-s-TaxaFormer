@@ -167,7 +167,9 @@
 
         async function checkSystemStatus() {
             try {
-                const response = await fetch(`${API_BASE}/api/simple-analytics/test`);
+                const response = await fetch(`${API_BASE}/api/simple-analytics/test`, {
+                    headers: { 'ngrok-skip-browser-warning': 'true' }
+                });
                 const data = await response.json();
                 
                 const statusElement = document.getElementById('systemStatus');

@@ -376,7 +376,7 @@ export default function OutputPage({ isDarkMode, onNavigate }: OutputPageProps) 
                 <button className={`w-full py-3 rounded-lg font-semibold transition-all transform hover:scale-105 ${
                   isDarkMode
                     ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-500 hover:to-pink-500'
-                    : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-500 hover:to-pink-500'
+                    : 'bg-gradient-to-r from-slate-600 to-slate-700 text-white hover:from-slate-500 hover:to-slate-600'
                 } shadow-lg`}>
                   View Novel Clusters
                 </button>

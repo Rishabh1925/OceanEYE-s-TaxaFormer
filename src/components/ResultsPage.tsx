@@ -29,41 +29,39 @@ export default function ResultsPage({ isDarkMode, onNavigate }: ResultsPageProps
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Load CSV data from the results folder
-    const loadCSVData = async () => {
+    // Load real analysis data from localStorage
+    const loadAnalysisData = () => {
       try {
-        const response = await fetch('/results/novel_candidates_list.csv');
-        if (!response.ok) {
-          throw new Error('Failed to load CSV file');
+        const storedData = localStorage.getItem('analysisResults');
+        if (!storedData) {
+          throw new Error('No analysis results found. Please analyze a file first.');
         }
-        
-        const text = await response.text();
-        const rows = text.split('\n').slice(1); // Skip header
-        
-        const parsedData: CSVRow[] = rows
-          .filter(row => row.trim())
-          .map(row => {
-            const cols = row.split(',');
-            return {
-              Sequence_ID: cols[0]?.trim() || '',
-              Predicted_Taxonomy: cols[1]?.trim() || '',
-              Novelty_Score: parseFloat(cols[2]) || 0,
-              Status: cols[3]?.trim() || '',
-              Nearest_Neighbor_Taxonomy: cols[4]?.trim() || '',
-              Nearest_Neighbor_Dist: parseFloat(cols[5]) || 0,
-            };
-          });
-        
+
+        const analysisResults = JSON.parse(storedData);
+        console.log('📊 Loading analysis results for charts:', analysisResults);
+
+        // Convert analysis results to CSV format for charts
+        const sequences = analysisResults.sequences || [];
+        const parsedData: CSVRow[] = sequences.map((seq: any) => ({
+          Sequence_ID: seq.accession || seq.sequence_id || 'Unknown',
+          Predicted_Taxonomy: seq.taxonomy || 'Unknown',
+          Novelty_Score: seq.novelty_score || 0,
+          Status: seq.status || 'Unknown',
+          Nearest_Neighbor_Taxonomy: seq.taxonomy || 'Unknown',
+          Nearest_Neighbor_Dist: 1 - (seq.confidence || 0), // Convert confidence to distance
+        }));
+
+        console.log(`✅ Loaded ${parsedData.length} sequences for analysis charts`);
         setCsvData(parsedData);
         setLoading(false);
       } catch (err) {
-        console.error('Error loading CSV:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load data');
+        console.error('Error loading analysis data:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load analysis data');
         setLoading(false);
       }
     };
 
-    loadCSVData();
+    loadAnalysisData();
   }, []);
 
   // Calculate summary stats
@@ -176,17 +174,29 @@ export default function ResultsPage({ isDarkMode, onNavigate }: ResultsPageProps
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-8 text-center">
         <h2 className={`text-2xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-          Error Loading Data
+          No Analysis Results Found
         </h2>
         <p className={`mb-6 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
           {error}
         </p>
-        <button
-          onClick={() => onNavigate('upload')}
-          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          Go to Upload
-        </button>
+        <div className="flex gap-4">
+          <button
+            onClick={() => onNavigate('upload')}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Upload & Analyze File
+          </button>
+          <button
+            onClick={() => onNavigate('output')}
+            className={`px-6 py-3 rounded-lg transition-colors ${
+              isDarkMode 
+                ? 'bg-slate-700 text-white hover:bg-slate-600' 
+                : 'bg-slate-200 text-slate-900 hover:bg-slate-300'
+            }`}
+          >
+            View Results
+          </button>
+        </div>
       </div>
     );
   }
@@ -311,7 +321,7 @@ export default function ResultsPage({ isDarkMode, onNavigate }: ResultsPageProps
 
         {/* Charts Section */}
         <div className="space-y-8">
-          {/* Interactive Area Chart (demo data) */}
+          {/* Interactive Area Chart (3 months/30 days/7 days line graph) */}
           <div>
             <ChartAreaInteractive />
           </div>
