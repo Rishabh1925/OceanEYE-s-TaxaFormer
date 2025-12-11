@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
-import { Globe, MapPin, Layers, Satellite, Navigation, X, Plus, Crosshair, Anchor, Waves, Fish, Compass } from 'lucide-react';
+import { Globe, MapPin, Layers, Satellite, Navigation, X, Plus, Crosshair, Anchor, Waves, Fish, Compass, RefreshCw } from 'lucide-react';
 
 interface MapPageProps {
   isDarkMode: boolean;
@@ -52,6 +52,8 @@ export default function MapPage({ isDarkMode, onNavigate }: MapPageProps) {
   const [activeLayer, setActiveLayer] = useState<'satellite' | 'ocean'>('satellite');
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [userMarkers, setUserMarkers] = useState<UserMarker[]>([]);
+  const [realLocations, setRealLocations] = useState<any[]>([]);
+  const [hasMetadata, setHasMetadata] = useState(false);
   
   // Icon and color mapping for each location
   const getLocationStyle = (locationName: string) => {
@@ -66,6 +68,58 @@ export default function MapPage({ isDarkMode, onNavigate }: MapPageProps) {
     return styles[locationName] || { icon: MapPin, gradient: 'linear-gradient(135deg, #0891B2 0%, #06B6D4 100%)' };
   };
   
+  // Load real metadata from analysis results
+  const loadRealMetadata = () => {
+    try {
+      const storedData = localStorage.getItem('analysisResults');
+      if (!storedData) {
+        setHasMetadata(false);
+        return;
+      }
+
+      const analysisResults = JSON.parse(storedData);
+      const metadata = analysisResults.metadata;
+
+      // Check if user provided location metadata
+      if (metadata && metadata.userMetadata) {
+        const userMeta = metadata.userMetadata;
+        
+        // Handle nested structure from UploadPage
+        const lat = parseFloat(userMeta.location?.latitude || userMeta.latitude);
+        const lon = parseFloat(userMeta.location?.longitude || userMeta.longitude);
+        
+        if (!isNaN(lat) && !isNaN(lon)) {
+          const realLocation = {
+            id: 1,
+            name: userMeta.sampleId || userMeta.location?.site || 'User Sample Location',
+            lat: lat,
+            lon: lon,
+            samples: metadata.totalSequences || 0,
+            diversity: metadata.novelSequences > 10 ? 'High' : metadata.novelSequences > 5 ? 'Medium' : 'Low',
+            depth: parseFloat(userMeta.location?.depth) || 0,
+            temperature: parseFloat(userMeta.environmental?.temperature) || null,
+            ph: parseFloat(userMeta.environmental?.pH) || null,
+            salinity: parseFloat(userMeta.environmental?.salinity) || null,
+            collectionDate: userMeta.datetime?.date || null,
+            researcher: userMeta.researcherName || null,
+            institution: userMeta.institution || null
+          };
+          
+          setRealLocations([realLocation]);
+          setHasMetadata(true);
+          console.log('✅ Real metadata loaded for map:', realLocation);
+          return;
+        }
+      }
+      
+      setHasMetadata(false);
+    } catch (error) {
+      console.error('Error loading metadata:', error);
+      setHasMetadata(false);
+    }
+  };
+
+  // Fallback sample locations (used when no real metadata)
   const sampleLocations = [
     { id: 1, name: 'Pacific Deep Sea', lat: 35.6, lon: -125.3, samples: 142, diversity: 'High', depth: 4200 },
     { id: 2, name: 'Coral Triangle', lat: -5.5, lon: 122.8, samples: 198, diversity: 'Very High', depth: 850 },
@@ -74,6 +128,74 @@ export default function MapPage({ isDarkMode, onNavigate }: MapPageProps) {
     { id: 5, name: 'Caribbean Sea', lat: 18.5, lon: -78.3, samples: 156, diversity: 'High', depth: 2100 },
     { id: 6, name: 'Red Sea', lat: 22.0, lon: 38.5, samples: 103, diversity: 'High', depth: 1800 },
   ];
+
+  // Use real locations if available, otherwise use sample locations
+  const displayLocations = hasMetadata ? realLocations : sampleLocations;
+
+  // Generate species data from real analysis results
+  const getSpeciesData = () => {
+    try {
+      const storedData = localStorage.getItem('analysisResults');
+      if (!storedData) return null;
+
+      const analysisResults = JSON.parse(storedData);
+      const sequences = analysisResults.sequences || [];
+      const taxonomySummary = analysisResults.taxonomy_summary || [];
+
+      if (sequences.length === 0) return null;
+
+      // Extract top species from sequences
+      const speciesCount: Record<string, { count: number; phylum: string; location: string }> = {};
+      
+      sequences.forEach((seq: any) => {
+        if (seq.taxonomy) {
+          // Extract species name from taxonomy string
+          const taxonomyParts = seq.taxonomy.split(';');
+          const species = taxonomyParts[taxonomyParts.length - 1]?.trim() || 'Unknown species';
+          const phylum = taxonomyParts[0]?.trim() || 'Unknown';
+          
+          if (!speciesCount[species]) {
+            speciesCount[species] = { 
+              count: 0, 
+              phylum: phylum,
+              location: hasMetadata && realLocations.length > 0 ? realLocations[0].name : 'Sample Location'
+            };
+          }
+          speciesCount[species].count++;
+        }
+      });
+
+      // Convert to array and sort by count
+      const sortedSpecies = Object.entries(speciesCount)
+        .map(([species, data]) => ({
+          species: species,
+          count: data.count,
+          phylum: data.phylum,
+          location: data.location
+        }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 6); // Top 6 species
+
+      return sortedSpecies;
+    } catch (error) {
+      console.error('Error generating species data:', error);
+      return null;
+    }
+  };
+
+  const realSpeciesData = getSpeciesData();
+
+  // Fallback species data when no real analysis is available
+  const fallbackSpeciesData = [
+    { location: 'Great Barrier Reef', species: 'Acropora cervicornis', count: 234, phylum: 'Cnidaria' },
+    { location: 'Coral Triangle', species: 'Tridacna gigas', count: 198, phylum: 'Mollusca' },
+    { location: 'Caribbean Sea', species: 'Octopus vulgaris', count: 156, phylum: 'Mollusca' },
+    { location: 'Pacific Deep Sea', species: 'Bathynomus giganteus', count: 142, phylum: 'Arthropoda' },
+    { location: 'Red Sea', species: 'Acanthurus sohal', count: 103, phylum: 'Chordata' },
+    { location: 'Mediterranean Basin', species: 'Posidonia oceanica', count: 87, phylum: 'Tracheophyta' }
+  ];
+
+  const displaySpeciesData = realSpeciesData || fallbackSpeciesData;
 
   // Function to get color based on depth
   const getDepthColor = (depth: number) => {
@@ -137,6 +259,34 @@ export default function MapPage({ isDarkMode, onNavigate }: MapPageProps) {
     }
   ];
 
+  // Separate useEffect for metadata loading
+  useEffect(() => {
+    // Load real metadata from localStorage
+    loadRealMetadata();
+    
+    // Listen for localStorage changes to update data dynamically
+    const handleStorageChange = () => {
+      loadRealMetadata();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Also check for changes when the component becomes visible
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadRealMetadata();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
+  // Separate useEffect for map initialization
   useEffect(() => {
     // Inject Leaflet CSS
     injectLeafletCSS();
@@ -274,10 +424,13 @@ export default function MapPage({ isDarkMode, onNavigate }: MapPageProps) {
     const northEast = L.latLng(85, 180);
     const bounds = L.latLngBounds(southWest, northEast);
 
-    // Initialize map with bounds
+    // Initialize map with default global view
+    const initialCenter = [20, 0] as [number, number];
+    const initialZoom = 2.5;
+
     const map = L.map(mapContainerRef.current, {
-      center: [20, 0],
-      zoom: 2.5,
+      center: initialCenter,
+      zoom: initialZoom,
       minZoom: 2,
       maxZoom: 18,
       zoomControl: true,
@@ -302,8 +455,8 @@ export default function MapPage({ isDarkMode, onNavigate }: MapPageProps) {
       }
     ).addTo(map);
 
-    // Add markers for each sample location and store references
-    sampleLocations.forEach((location) => {
+    // Add markers for each location and store references
+    displayLocations.forEach((location) => {
       // Get depth-based color for this location
       const depthColor = getDepthColor(location.depth);
       
@@ -330,7 +483,7 @@ export default function MapPage({ isDarkMode, onNavigate }: MapPageProps) {
       // Store marker reference
       markersRef.current.set(location.id, marker);
 
-      // Create improved glassmorphism popup content
+      // Create improved glassmorphism popup content with real metadata
       const popupContent = `
         <div style="
           font-family: system-ui;
@@ -362,7 +515,7 @@ export default function MapPage({ isDarkMode, onNavigate }: MapPageProps) {
           
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
             <div style="padding: 10px; background: rgba(255, 255, 255, 0.08); border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.12);">
-              <div style="font-size: 10px; color: rgba(0, 0, 0, 0.6); margin-bottom: 4px; text-transform: uppercase;">Samples</div>
+              <div style="font-size: 10px; color: rgba(0, 0, 0, 0.6); margin-bottom: 4px; text-transform: uppercase;">Sequences</div>
               <div style="font-size: 20px; font-weight: 700; color: #000000;">${location.samples}</div>
             </div>
             <div style="padding: 10px; background: rgba(255, 255, 255, 0.08); border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.12);">
@@ -370,6 +523,45 @@ export default function MapPage({ isDarkMode, onNavigate }: MapPageProps) {
               <div style="font-size: 20px; font-weight: 700; color: #000000;">${location.depth}m</div>
             </div>
           </div>
+          
+          ${hasMetadata && location.temperature !== null ? `
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+            <div style="padding: 8px; background: rgba(255, 255, 255, 0.08); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.12);">
+              <div style="font-size: 9px; color: rgba(0, 0, 0, 0.6); margin-bottom: 2px; text-transform: uppercase;">Temperature</div>
+              <div style="font-size: 14px; font-weight: 600; color: #000000;">${location.temperature}°C</div>
+            </div>
+            ${location.ph !== null ? `
+            <div style="padding: 8px; background: rgba(255, 255, 255, 0.08); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.12);">
+              <div style="font-size: 9px; color: rgba(0, 0, 0, 0.6); margin-bottom: 2px; text-transform: uppercase;">pH Level</div>
+              <div style="font-size: 14px; font-weight: 600; color: #000000;">${location.ph}</div>
+            </div>
+            ` : ''}
+          </div>
+          ` : ''}
+          
+          ${hasMetadata && location.salinity !== null ? `
+          <div style="margin-bottom: 12px;">
+            <div style="padding: 8px; background: rgba(255, 255, 255, 0.08); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.12); display: inline-block;">
+              <div style="font-size: 9px; color: rgba(0, 0, 0, 0.6); margin-bottom: 2px; text-transform: uppercase;">Salinity</div>
+              <div style="font-size: 14px; font-weight: 600; color: #000000;">${location.salinity} ppt</div>
+            </div>
+          </div>
+          ` : ''}
+          
+          ${hasMetadata && location.researcher ? `
+          <div style="margin-bottom: 8px; padding: 8px; background: rgba(255, 255, 255, 0.05); border-radius: 8px;">
+            <div style="font-size: 9px; color: rgba(0, 0, 0, 0.6); margin-bottom: 2px; text-transform: uppercase;">Researcher</div>
+            <div style="font-size: 12px; color: #000000;">${location.researcher}</div>
+            ${location.institution ? `<div style="font-size: 10px; color: rgba(0, 0, 0, 0.7);">${location.institution}</div>` : ''}
+          </div>
+          ` : ''}
+          
+          ${hasMetadata && location.collectionDate ? `
+          <div style="margin-bottom: 12px; padding: 8px; background: rgba(255, 255, 255, 0.05); border-radius: 8px;">
+            <div style="font-size: 9px; color: rgba(0, 0, 0, 0.6); margin-bottom: 2px; text-transform: uppercase;">Collection Date</div>
+            <div style="font-size: 12px; color: #000000;">${new Date(location.collectionDate).toLocaleDateString()}</div>
+          </div>
+          ` : ''}
           
           <div style="margin-bottom: 12px;">
             <div style="
@@ -426,7 +618,7 @@ export default function MapPage({ isDarkMode, onNavigate }: MapPageProps) {
     });
 
     // Add circle overlays to show sample coverage areas
-    sampleLocations.forEach((location) => {
+    displayLocations.forEach((location) => {
       L.circle([location.lat, location.lon], {
         color: '#06b6d4',
         fillColor: '#06b6d4',
@@ -445,7 +637,19 @@ export default function MapPage({ isDarkMode, onNavigate }: MapPageProps) {
         mapRef.current = null;
       }
     };
-  }, []);
+  }, []); // Empty dependency array - map should only initialize once
+
+  // Separate useEffect to update map view when metadata changes
+  useEffect(() => {
+    if (mapRef.current && hasMetadata && realLocations.length > 0) {
+      // Fly to user's location when real metadata is loaded
+      const userLocation = realLocations[0];
+      mapRef.current.flyTo([userLocation.lat, userLocation.lon], 6, {
+        duration: 1.5,
+        easeLinearity: 0.25
+      });
+    }
+  }, [hasMetadata, realLocations]);
 
   const handleLayerChange = (layer: 'satellite' | 'ocean') => {
     setActiveLayer(layer);
@@ -474,7 +678,7 @@ export default function MapPage({ isDarkMode, onNavigate }: MapPageProps) {
 
   const flyToLocation = (lat: number, lon: number) => {
     // Find the location ID from coordinates
-    const location = sampleLocations.find(loc => loc.lat === lat && loc.lon === lon);
+    const location = displayLocations.find(loc => loc.lat === lat && loc.lon === lon);
     
     // Scroll to map section
     if (mapSectionRef.current) {
@@ -822,9 +1026,87 @@ export default function MapPage({ isDarkMode, onNavigate }: MapPageProps) {
             </p>
           </div>
 
+          {/* No Metadata Message */}
+          {!hasMetadata && (
+            <div className={`mb-8 p-6 rounded-xl border-2 border-dashed ${
+              isDarkMode ? 'border-slate-600 bg-slate-800/30' : 'border-slate-300 bg-slate-100/50'
+            } text-center`}>
+              <MapPin className={`w-12 h-12 mx-auto mb-4 ${
+                isDarkMode ? 'text-slate-400' : 'text-slate-500'
+              }`} />
+              <h3 className={`text-lg font-semibold mb-2 ${
+                isDarkMode ? 'text-white' : 'text-slate-900'
+              }`}>
+                No Location Data Available
+              </h3>
+              <p className={`mb-4 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                To see your sample locations on the map, please provide metadata (latitude, longitude) when uploading files.
+              </p>
+              <div className="flex gap-3 justify-center">
+                <button
+                  onClick={() => onNavigate('upload')}
+                  className={`px-6 py-2 rounded-lg transition-colors ${
+                    isDarkMode
+                      ? 'bg-cyan-600 hover:bg-cyan-700 text-white'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  }`}
+                >
+                  Upload with Metadata
+                </button>
+                <button
+                  onClick={loadRealMetadata}
+                  className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+                    isDarkMode
+                      ? 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+                      : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+                  }`}
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Refresh
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Data Status Messages */}
+          {hasMetadata && realSpeciesData ? (
+            <div className={`mb-8 p-4 rounded-lg ${
+              isDarkMode ? 'bg-green-900/20 border border-green-700' : 'bg-green-100 border border-green-300'
+            }`}>
+              <div className="flex items-center gap-3">
+                <MapPin className={`w-5 h-5 ${isDarkMode ? 'text-green-400' : 'text-green-600'}`} />
+                <span className={`font-medium ${isDarkMode ? 'text-green-400' : 'text-green-700'}`}>
+                  Showing your real analysis data and sample location from uploaded file
+                </span>
+              </div>
+            </div>
+          ) : hasMetadata && !realSpeciesData ? (
+            <div className={`mb-8 p-4 rounded-lg ${
+              isDarkMode ? 'bg-blue-900/20 border border-blue-700' : 'bg-blue-100 border border-blue-300'
+            }`}>
+              <div className="flex items-center gap-3">
+                <MapPin className={`w-5 h-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`} />
+                <span className={`font-medium ${isDarkMode ? 'text-blue-400' : 'text-blue-700'}`}>
+                  Showing your real sample location with example species data
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className={`mb-8 p-4 rounded-lg ${
+              isDarkMode ? 'bg-slate-700/50 border border-slate-600' : 'bg-slate-100 border border-slate-300'
+            }`}>
+              <div className="flex items-center gap-3">
+                <Globe className={`w-5 h-5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`} />
+                <span className={`font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                  Showing example locations and species data - upload a file to see your real data
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Location Comparison Grid - Microsoft Style */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
-            {sampleLocations.map((location, index) => (
+            {displayLocations.map((location, index) => (
               <div
                 key={location.id}
                 style={{
@@ -1078,7 +1360,7 @@ export default function MapPage({ isDarkMode, onNavigate }: MapPageProps) {
                 marginBottom: '8px',
                 lineHeight: '1.2'
               }}>
-                Top Species by Location
+                {realSpeciesData ? 'Top Species from Your Analysis' : 'Top Species by Location'}
               </h3>
               <p style={{
                 fontSize: '14px',
@@ -1086,19 +1368,14 @@ export default function MapPage({ isDarkMode, onNavigate }: MapPageProps) {
                 letterSpacing: '0.2px',
                 lineHeight: '1.5'
               }}>
-                Most abundant species detected across sample sites
+                {realSpeciesData 
+                  ? 'Most abundant species detected in your uploaded sample' 
+                  : 'Most abundant species detected across sample sites'}
               </p>
             </div>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {[
-                { location: 'Great Barrier Reef', species: 'Acropora cervicornis', count: 234, phylum: 'Cnidaria' },
-                { location: 'Coral Triangle', species: 'Tridacna gigas', count: 198, phylum: 'Mollusca' },
-                { location: 'Caribbean Sea', species: 'Octopus vulgaris', count: 156, phylum: 'Mollusca' },
-                { location: 'Pacific Deep Sea', species: 'Bathynomus giganteus', count: 142, phylum: 'Arthropoda' },
-                { location: 'Red Sea', species: 'Acanthurus sohal', count: 103, phylum: 'Chordata' },
-                { location: 'Mediterranean Basin', species: 'Posidonia oceanica', count: 87, phylum: 'Tracheophyta' }
-              ].map((item, idx) => (
+              {displaySpeciesData.map((item, idx) => (
                 <div
                   key={idx}
                   style={{
@@ -1179,7 +1456,7 @@ export default function MapPage({ isDarkMode, onNavigate }: MapPageProps) {
                         height: '100%',
                         borderRadius: '4px',
                         background: '#0891B2',
-                        width: `${(item.count / 234) * 100}%`,
+                        width: `${(item.count / Math.max(...displaySpeciesData.map(s => s.count))) * 100}%`,
                         transition: 'width 1s ease-out'
                       }}
                     />
