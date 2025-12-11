@@ -6,7 +6,7 @@ interface ContactPageProps {
   onNavigate: (page: string) => void;
 }
 
-export default function ContactPage({ isDarkMode }: ContactPageProps) {
+export default function ContactPage({ isDarkMode, onNavigate }: ContactPageProps) {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -279,17 +279,27 @@ This message was sent via the Taxaformer contact form.`;
                     isDarkMode ? 'text-cyan-400' : 'text-blue-500'
                   }`} />
                 </div>
-                <div>
+                <div className="flex-1">
                   <h3 className={`text-lg mb-1 font-bold ${
                     isDarkMode ? 'text-white' : 'text-slate-900'
                   }`}>
                     FAQ
                   </h3>
-                  <p className={`text-sm ${
+                  <p className={`text-sm mb-3 ${
                     isDarkMode ? 'text-slate-400' : 'text-slate-600'
                   }`}>
                     Find answers to common questions in our FAQ section
                   </p>
+                  <button
+                    onClick={() => onNavigate('faq')}
+                    className={`${
+                      isDarkMode 
+                        ? 'text-cyan-400 hover:text-cyan-300' 
+                        : 'text-blue-600 hover:text-blue-700'
+                    }`}
+                  >
+                    View All FAQs →
+                  </button>
                 </div>
               </div>
             </div>

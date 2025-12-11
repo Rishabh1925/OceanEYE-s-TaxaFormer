@@ -12,6 +12,7 @@ import UploadPage from '@/components/UploadPage';
 import ReportPage from '@/components/ReportPage';
 import ResultsPage from '@/components/ResultsPage';
 import ContactPage from '@/components/ContactPage';
+import FAQPage from '@/components/FAQPage';
 import OutputPage from '@/components/OutputPage';
 
 // Dynamic imports for visual effects
@@ -505,7 +506,7 @@ function CircularGallery({ items, bend = 3, isDarkMode }: any) {
 // MAIN PAGE COMPONENT
 // ----------------------------------------------------------------------
 
-type PageType = 'home' | 'upload' | 'map' | 'report' | 'contact' | 'output' | 'results';
+type PageType = 'home' | 'upload' | 'map' | 'report' | 'contact' | 'faq' | 'output' | 'results';
 
 export default function Home() {
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -570,6 +571,7 @@ export default function Home() {
           {currentPage === 'report' && <ReportPage isDarkMode={isDarkMode} onNavigate={handleNavigate} />}
           {currentPage === 'results' && <ResultsPage isDarkMode={isDarkMode} onNavigate={handleNavigate} />}
           {currentPage === 'contact' && <ContactPage isDarkMode={isDarkMode} onNavigate={handleNavigate} />}
+          {currentPage === 'faq' && <FAQPage isDarkMode={isDarkMode} onNavigate={handleNavigate} />}
           {currentPage === 'output' && <OutputPage isDarkMode={isDarkMode} onNavigate={handleNavigate} />}
         </div>
       </div>
