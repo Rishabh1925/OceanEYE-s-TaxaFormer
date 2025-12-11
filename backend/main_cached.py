@@ -311,6 +311,76 @@ async def get_job(job_id: str):
 
 
 # ================================
+# SAMPLE FILES ENDPOINTS
+# ================================
+
+@app.get("/samples")
+async def get_sample_files(limit: int = 10, sort_by: str = "latest"):
+    """Get list of sample files for exploration"""
+    if not USE_DATABASE or not db:
+        raise HTTPException(status_code=503, detail="Database not available")
+    
+    try:
+        # Get completed jobs with their metadata
+        jobs = db.get_all_jobs(limit=50)  # Get more to filter and sort
+        
+        # Filter only completed jobs and transform to sample format
+        samples = []
+        for job in jobs:
+            if job.get('status') == 'complete' and job.get('result'):
+                result = job['result']
+                metadata = result.get('metadata', {})
+                
+                sample = {
+                    "job_id": job['job_id'],
+                    "filename": job['filename'],
+                    "total_sequences": metadata.get('totalSequences', 0),
+                    "created_at": job['created_at'],
+                    "file_size_mb": round(len(job.get('file_hash', '')) / 1024 / 1024 * 100, 1),  # Estimate
+                    "avg_confidence": metadata.get('avgConfidence', 0) / 100 if metadata.get('avgConfidence') else 0,
+                    "novel_species_count": len([seq for seq in result.get('sequences', []) if seq.get('status') == 'Novel'])
+                }
+                samples.append(sample)
+        
+        # Sort samples
+        if sort_by == "latest":
+            samples.sort(key=lambda x: x['created_at'], reverse=True)
+        elif sort_by == "heavy":
+            samples.sort(key=lambda x: x['file_size_mb'], reverse=True)
+        elif sort_by == "sequences":
+            samples.sort(key=lambda x: x['total_sequences'], reverse=True)
+        elif sort_by == "confidence":
+            samples.sort(key=lambda x: x['avg_confidence'], reverse=True)
+        
+        return {"samples": samples[:limit]}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/samples/{job_id}")
+async def get_sample_data(job_id: str):
+    """Get analysis data for a specific sample"""
+    if not USE_DATABASE or not db:
+        raise HTTPException(status_code=503, detail="Database not available")
+    
+    try:
+        job = db.get_job_by_id(job_id)
+        if not job:
+            raise HTTPException(status_code=404, detail="Sample not found")
+        
+        if job.get('status') != 'complete':
+            raise HTTPException(status_code=400, detail="Sample analysis not complete")
+        
+        return job.get('result', {})
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ================================
 # VISUALIZATION ENDPOINTS
 # ================================
 
