@@ -1,14 +1,69 @@
-import { Mail, MessageSquare, Send, Github, FileText } from 'lucide-react';
+import { useState } from 'react';
+import { Mail, MessageSquare, Send, FileText } from 'lucide-react';
 
 interface ContactPageProps {
   isDarkMode: boolean;
   onNavigate: (page: string) => void;
 }
 
-export default function ContactPage({ isDarkMode, onNavigate }: ContactPageProps) {
+export default function ContactPage({ isDarkMode }: ContactPageProps) {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    subject: '',
+    message: ''
+  });
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    alert('Thank you for your message! We will get back to you soon.');
+    
+    // Validate form data
+    if (!formData.name || !formData.email || !formData.subject || !formData.message) {
+      alert('Please fill in all fields before sending.');
+      return;
+    }
+
+    // Create email body with professional formatting
+    const emailBody = `Dear Taxaformer Team,
+
+I hope this message finds you well. I am reaching out regarding ${formData.subject.toLowerCase()}.
+
+${formData.message}
+
+I would appreciate your assistance with this matter. Please feel free to contact me at your earliest convenience.
+
+Best regards,
+${formData.name}
+
+---
+Contact Information:
+Name: ${formData.name}
+Email: ${formData.email}
+Subject: ${formData.subject}
+
+This message was sent via the Taxaformer contact form.`;
+
+    // Create mailto URL with pre-filled information
+    const mailtoUrl = `mailto:contact.taxaformer@gmail.com?subject=${encodeURIComponent(`[Taxaformer Contact] ${formData.subject}`)}&body=${encodeURIComponent(emailBody)}`;
+    
+    // Open email client
+    window.location.href = mailtoUrl;
+    
+    // Optionally reset form
+    setFormData({
+      name: '',
+      email: '',
+      subject: '',
+      message: ''
+    });
   };
 
   return (
@@ -43,6 +98,9 @@ export default function ContactPage({ isDarkMode, onNavigate }: ContactPageProps
                 </label>
                 <input
                   type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
                   required
                   className={`w-full px-4 py-3 rounded-lg border transition-all ${
                     isDarkMode
@@ -62,6 +120,9 @@ export default function ContactPage({ isDarkMode, onNavigate }: ContactPageProps
                 </label>
                 <input
                   type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
                   required
                   className={`w-full px-4 py-3 rounded-lg border transition-all ${
                     isDarkMode
@@ -81,6 +142,9 @@ export default function ContactPage({ isDarkMode, onNavigate }: ContactPageProps
                 </label>
                 <input
                   type="text"
+                  name="subject"
+                  value={formData.subject}
+                  onChange={handleInputChange}
                   required
                   className={`w-full px-4 py-3 rounded-lg border transition-all ${
                     isDarkMode
@@ -99,6 +163,9 @@ export default function ContactPage({ isDarkMode, onNavigate }: ContactPageProps
                   Message
                 </label>
                 <textarea
+                  name="message"
+                  value={formData.message}
+                  onChange={handleInputChange}
                   required
                   rows={6}
                   className={`w-full px-4 py-3 rounded-lg border transition-all resize-none ${
@@ -162,42 +229,6 @@ export default function ContactPage({ isDarkMode, onNavigate }: ContactPageProps
               </div>
             </div>
 
-            {/* GitHub */}
-            <div className={`rounded-xl p-6 ${
-              isDarkMode ? 'bg-slate-800/50' : 'bg-white/50'
-            } backdrop-blur-md`}>
-              <div className="flex items-start gap-4">
-                <div className={`p-3 rounded-lg ${
-                  isDarkMode ? 'bg-cyan-500/20' : 'bg-blue-500/20'
-                }`}>
-                  <Github className={`w-6 h-6 ${
-                    isDarkMode ? 'text-cyan-400' : 'text-blue-500'
-                  }`} />
-                </div>
-                <div>
-                  <h3 className={`text-lg mb-1 font-bold ${
-                    isDarkMode ? 'text-white' : 'text-slate-900'
-                  }`}>
-                    GitHub
-                  </h3>
-                  <p className={`text-sm mb-2 ${
-                    isDarkMode ? 'text-slate-400' : 'text-slate-600'
-                  }`}>
-                    Check out our code and contribute
-                  </p>
-                  <a
-                    href="https://github.com/Shaurya-Sinha3301/Taxaformer-Final"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`${
-                      isDarkMode ? 'text-cyan-400 hover:text-cyan-300' : 'text-blue-600 hover:text-blue-700'
-                    }`}
-                  >
-                    github.com/Taxaformer
-                  </a>
-                </div>
-              </div>
-            </div>
 
             {/* Documentation */}
             <div className={`rounded-xl p-6 ${
@@ -223,7 +254,9 @@ export default function ContactPage({ isDarkMode, onNavigate }: ContactPageProps
                     Read our guides and API docs
                   </p>
                   <a
-                    href="#"
+                    href="https://drive.google.com/file/d/1l5WB4pIUDuEXwNs7j4DxH1iYzScS7IC6/view?usp=sharing"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className={`${
                       isDarkMode ? 'text-cyan-400 hover:text-cyan-300' : 'text-blue-600 hover:text-blue-700'
                     }`}
