@@ -110,6 +110,7 @@ export default function OutputPage({ isDarkMode, onNavigate }: OutputPageProps) 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterOpen, setFilterOpen] = useState(false);
   const [copiedText, setCopiedText] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [analysisData, setAnalysisData] = useState<any>(null);
   
@@ -123,6 +124,20 @@ export default function OutputPage({ isDarkMode, onNavigate }: OutputPageProps) 
     processingTime: '',
     avgConfidence: 0
   });
+
+  // Close filter dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (filterOpen) {
+        setFilterOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [filterOpen]);
 
   // Load real data from localStorage on mount
   useEffect(() => {
@@ -231,10 +246,45 @@ export default function OutputPage({ isDarkMode, onNavigate }: OutputPageProps) 
     setTimeout(() => setCopiedText(false), 2000);
   };
 
-  const filteredTableData = taxonomyTableData.filter(row => 
-    row.accession.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    row.taxonomy.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleExportCSV = () => {
+    console.log('🔽 Export CSV function called from OutputPage!');
+    console.log('Filtered data length:', filteredTableData.length);
+    
+    const headers = ['Sequence_ID', 'Predicted_Taxonomy', 'Confidence', 'Length', 'Overlap', 'Cluster'];
+    const csvContent = [
+      headers.join(','),
+      ...filteredTableData.map(row => [
+        `"${row.accession || row.sequence_id || 'Unknown'}"`,
+        `"${row.taxonomy || 'Unknown'}"`,
+        row.confidence || 0,
+        row.length || 0,
+        row.overlap || 0,
+        `"${row.cluster || 'Unknown'}"`
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `taxonomy-results-${Date.now()}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const filteredTableData = taxonomyTableData.filter(row => {
+    const matchesSearch = searchQuery === '' || 
+      (row.accession && row.accession.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (row.taxonomy && row.taxonomy.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    const matchesFilter = filterStatus === 'all' || 
+      (row.status && row.status.toLowerCase() === filterStatus.toLowerCase());
+    
+    return matchesSearch && matchesFilter;
+  });
+
+  // Get unique statuses for filter dropdown
+  const uniqueStatuses = Array.from(new Set(taxonomyTableData.map(row => row.status).filter(status => status && status.trim().length > 0)));
 
   // Show loading state
   if (loading) {
@@ -502,7 +552,10 @@ export default function OutputPage({ isDarkMode, onNavigate }: OutputPageProps) 
                     type="text"
                     placeholder="Search sequences..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => {
+                      console.log('Search input changed in OutputPage:', e.target.value);
+                      setSearchQuery(e.target.value);
+                    }}
                     className={`pl-10 pr-4 py-2 rounded-lg border transition-all ${
                       isDarkMode 
                         ? 'bg-slate-700/60 border-slate-600 text-white placeholder-slate-400' 
@@ -511,20 +564,73 @@ export default function OutputPage({ isDarkMode, onNavigate }: OutputPageProps) 
                   />
                 </div>
                 
-                <button className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
-                  isDarkMode 
-                    ? 'bg-slate-700/60 hover:bg-slate-600/60 text-white border border-slate-600' 
-                    : 'bg-white/80 hover:bg-white text-slate-900 border border-blue-200'
-                }`}>
-                  <Filter className="w-4 h-4" />
-                  Filter
-                </button>
+                <div className="relative">
+                  <button 
+                    onClick={() => setFilterOpen(!filterOpen)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+                      isDarkMode 
+                        ? 'bg-slate-700/60 hover:bg-slate-600/60 text-white border border-slate-600' 
+                        : 'bg-white/80 hover:bg-white text-slate-900 border border-blue-200'
+                    }`}
+                  >
+                    <Filter className="w-4 h-4" />
+                    Filter
+                    {filterStatus !== 'all' && (
+                      <span className={`px-2 py-0.5 rounded text-xs ${
+                        isDarkMode ? 'bg-cyan-500/20 text-cyan-400' : 'bg-blue-100 text-blue-700'
+                      }`}>
+                        {filterStatus}
+                      </span>
+                    )}
+                  </button>
+                  
+                  {filterOpen && (
+                    <div className={`absolute top-full left-0 mt-1 w-48 rounded-lg border shadow-lg z-10 ${
+                      isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
+                    }`}>
+                      <div className="p-2">
+                        <button
+                          onClick={() => {
+                            setFilterStatus('all');
+                            setFilterOpen(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded text-sm transition-colors ${
+                            filterStatus === 'all'
+                              ? isDarkMode ? 'bg-cyan-500/20 text-cyan-400' : 'bg-blue-100 text-blue-700'
+                              : isDarkMode ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-100'
+                          }`}
+                        >
+                          All Statuses
+                        </button>
+                        {uniqueStatuses.map(status => (
+                          <button
+                            key={status}
+                            onClick={() => {
+                              setFilterStatus(status);
+                              setFilterOpen(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 rounded text-sm transition-colors ${
+                              filterStatus === status
+                                ? isDarkMode ? 'bg-cyan-500/20 text-cyan-400' : 'bg-blue-100 text-blue-700'
+                                : isDarkMode ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-100'
+                            }`}
+                          >
+                            {status}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
                 
-                <button className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
-                  isDarkMode 
-                    ? 'bg-cyan-600 hover:bg-cyan-500 text-white' 
-                    : 'bg-cyan-600 hover:bg-cyan-500 text-white'
-                }`}>
+                <button 
+                  onClick={handleExportCSV}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+                    isDarkMode 
+                      ? 'bg-cyan-600 hover:bg-cyan-500 text-white' 
+                      : 'bg-cyan-600 hover:bg-cyan-500 text-white'
+                  }`}
+                >
                   <Download className="w-4 h-4" />
                   Export CSV
                 </button>

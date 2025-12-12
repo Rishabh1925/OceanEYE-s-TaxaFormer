@@ -10,7 +10,13 @@ class SimpleAnalytics {
 
   constructor() {
     if (typeof window !== 'undefined') {
-      this.initSession();
+      // Only initialize analytics if explicitly enabled
+      const enableAnalytics = localStorage.getItem('enableAnalytics') === 'true';
+      if (enableAnalytics) {
+        this.initSession();
+      } else {
+        console.log('📊 Analytics disabled - running in offline mode');
+      }
     }
   }
 
@@ -22,6 +28,12 @@ class SimpleAnalytics {
       const testResponse = await fetch(`${this.apiUrl}/test`, {
         headers: { 'ngrok-skip-browser-warning': 'true' }
       });
+      
+      if (!testResponse.ok) {
+        console.warn('⚠️ Analytics backend not available, running in offline mode');
+        return;
+      }
+      
       const testResult = await testResponse.json();
       console.log('📊 Analytics test result:', testResult);
       

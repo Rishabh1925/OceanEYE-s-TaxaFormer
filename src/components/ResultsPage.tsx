@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Download, Share2, TrendingUp, Database } from 'lucide-react';
+import { ArrowLeft, Download, Share2, TrendingUp, Database, Search, Filter, FileDown } from 'lucide-react';
 import { ChartTaxaAbundance } from './charts/ChartTaxaAbundance';
 import { ChartTaxonomyComposition } from './charts/ChartTaxonomyComposition';
 import { ChartTaxonomySankey } from './charts/ChartTaxonomySankey';
@@ -27,6 +27,25 @@ export default function ResultsPage({ isDarkMode, onNavigate }: ResultsPageProps
   const [loading, setLoading] = useState(true);
   const [csvData, setCsvData] = useState<CSVRow[]>([]);
   const [error, setError] = useState<string | null>(null);
+  
+  // Search and filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+
+  // Close filter dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showFilterDropdown) {
+        setShowFilterDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showFilterDropdown]);
 
   useEffect(() => {
     // Load real analysis data from localStorage
@@ -64,15 +83,31 @@ export default function ResultsPage({ isDarkMode, onNavigate }: ResultsPageProps
     loadAnalysisData();
   }, []);
 
-  // Calculate summary stats
+  // Filter and search data
+  const filteredData = csvData.filter(row => {
+    const matchesSearch = searchTerm === '' || 
+      row.Sequence_ID.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      row.Predicted_Taxonomy.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesFilter = filterStatus === 'all' || 
+      row.Status.toLowerCase() === filterStatus.toLowerCase();
+    
+    return matchesSearch && matchesFilter;
+  });
+
+  // Calculate summary stats from filtered data
   const stats = {
-    total: csvData.length,
-    avgNoveltyScore: csvData.length > 0 
-      ? (csvData.reduce((sum, row) => sum + row.Novelty_Score, 0) / csvData.length).toFixed(4)
+    total: filteredData.length,
+    totalOriginal: csvData.length,
+    avgNoveltyScore: filteredData.length > 0 
+      ? (filteredData.reduce((sum, row) => sum + row.Novelty_Score, 0) / filteredData.length).toFixed(4)
       : '0.0000',
-    uniqueTaxa: new Set(csvData.map(row => row.Predicted_Taxonomy)).size,
-    potentiallyNovel: csvData.filter(row => row.Novelty_Score > 0.15).length,
+    uniqueTaxa: new Set(filteredData.map(row => row.Predicted_Taxonomy)).size,
+    potentiallyNovel: filteredData.filter(row => row.Novelty_Score > 0.15).length,
   };
+
+  // Get unique statuses for filter dropdown
+  const uniqueStatuses = Array.from(new Set(csvData.map(row => row.Status).filter(status => status && status.trim().length > 0)));
 
   // Prepare data for novelty score bar chart (using same ranges as histogram)
   const noveltyBins = [
@@ -86,7 +121,7 @@ export default function ResultsPage({ isDarkMode, onNavigate }: ResultsPageProps
 
   const noveltyBarData: { category: string; value: number }[] = noveltyBins.map(bin => ({
     category: bin.label,
-    value: csvData.filter(row => {
+    value: filteredData.filter(row => {
       const score = row.Novelty_Score;
       // Last bin is open-ended on the upper side
       if (bin.label === '0.25+') {
@@ -97,14 +132,14 @@ export default function ResultsPage({ isDarkMode, onNavigate }: ResultsPageProps
   }));
 
   // Prepare data for sequence status composition pie chart
-  const statusCounts: Record<string, number> = csvData.reduce((acc, row) => {
+  const statusCounts: Record<string, number> = filteredData.reduce((acc, row) => {
     const key = row.Status && row.Status.trim().length > 0 ? row.Status.trim() : 'Unknown';
     acc[key] = (acc[key] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
   const pieColors = ['#A855F7', '#22C55E', '#EAB308', '#3B82F6', '#F97316', '#EC4899'];
-  const totalSequences = csvData.length || 1;
+  const totalSequences = filteredData.length || 1;
 
   const statusPieData: { name: string; value: number; color: string }[] = Object.entries(statusCounts).map(
     ([status, count], index) => ({
@@ -116,7 +151,7 @@ export default function ResultsPage({ isDarkMode, onNavigate }: ResultsPageProps
 
   // Prepare data for taxonomy radar chart (top phyla by sequence count)
   const radarLevelCounts = new Map<string, number>();
-  csvData.forEach(row => {
+  filteredData.forEach(row => {
     const parts = row.Predicted_Taxonomy.split(';');
     const firstPart = parts[0]?.trim() || '';
     const secondPart = parts[1]?.trim() || '';
@@ -159,6 +194,34 @@ export default function ResultsPage({ isDarkMode, onNavigate }: ResultsPageProps
     link.download = `taxaformer-results-${Date.now()}.json`;
     link.click();
   };
+
+  const handleExportCSV = () => {
+    console.log('🔽 Export CSV function called!');
+    console.log('Filtered data length:', filteredData.length);
+    
+    const headers = ['Sequence_ID', 'Predicted_Taxonomy', 'Novelty_Score', 'Status', 'Nearest_Neighbor_Taxonomy', 'Nearest_Neighbor_Dist'];
+    const csvContent = [
+      headers.join(','),
+      ...filteredData.map(row => [
+        `"${row.Sequence_ID}"`,
+        `"${row.Predicted_Taxonomy}"`,
+        row.Novelty_Score,
+        `"${row.Status}"`,
+        `"${row.Nearest_Neighbor_Taxonomy}"`,
+        row.Nearest_Neighbor_Dist
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `taxonomy-results-${Date.now()}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  console.log('ResultsPage render state:', { loading, error, csvDataLength: csvData.length, filteredDataLength: filteredData.length });
 
   if (loading) {
     return (
@@ -259,6 +322,152 @@ export default function ResultsPage({ isDarkMode, onNavigate }: ResultsPageProps
           </div>
         </div>
 
+        {/* Taxonomy Results Header with Search, Filter, Export CSV */}
+        <div className={`mb-6 p-4 rounded-xl ${
+          isDarkMode ? 'bg-slate-800/50' : 'bg-white/50'
+        } backdrop-blur-md border ${
+          isDarkMode ? 'border-slate-700' : 'border-slate-200'
+        }`}>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h2 className={`text-xl font-bold mb-1 ${
+                isDarkMode ? 'text-white' : 'text-slate-900'
+              }`}>
+                Taxonomy Results
+              </h2>
+              <div className="flex items-center gap-3">
+                <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                  {stats.total === stats.totalOriginal 
+                    ? `Showing all ${stats.total} sequences`
+                    : `Showing ${stats.total} of ${stats.totalOriginal} sequences`}
+                </p>
+                {(searchTerm || filterStatus !== 'all') && (
+                  <button
+                    onClick={() => {
+                      setSearchTerm('');
+                      setFilterStatus('all');
+                    }}
+                    className={`text-xs px-2 py-1 rounded transition-colors ${
+                      isDarkMode 
+                        ? 'bg-slate-700 text-slate-300 hover:bg-slate-600' 
+                        : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
+                    }`}
+                  >
+                    Clear filters
+                  </button>
+                )}
+              </div>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-3">
+              {/* Search Input */}
+              <div className="relative">
+                <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${
+                  isDarkMode ? 'text-slate-400' : 'text-slate-500'
+                }`} />
+                <input
+                  type="text"
+                  placeholder="Search sequences..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    console.log('Search input changed:', e.target.value);
+                    setSearchTerm(e.target.value);
+                  }}
+                  className={`pl-10 pr-4 py-2 rounded-lg border text-sm min-w-[200px] ${
+                    isDarkMode 
+                      ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-400 focus:border-cyan-500' 
+                      : 'bg-white border-slate-300 text-slate-900 placeholder-slate-500 focus:border-blue-500'
+                  } focus:outline-none focus:ring-2 focus:ring-opacity-50 ${
+                    isDarkMode ? 'focus:ring-cyan-500' : 'focus:ring-blue-500'
+                  }`}
+                  style={{ zIndex: 10 }}
+                />
+              </div>
+
+              {/* Filter Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={(e) => {
+                    console.log('Filter button clicked!', e);
+                    setShowFilterDropdown(!showFilterDropdown);
+                  }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm cursor-pointer ${
+                    isDarkMode
+                      ? 'bg-slate-700 border-slate-600 text-white hover:bg-slate-600'
+                      : 'bg-white border-slate-300 text-slate-900 hover:bg-slate-50'
+                  } transition-colors`}
+                  style={{ zIndex: 10 }}
+                >
+                  <Filter className="w-4 h-4" />
+                  Filter
+                  {filterStatus !== 'all' && (
+                    <span className={`px-2 py-0.5 rounded text-xs ${
+                      isDarkMode ? 'bg-cyan-500/20 text-cyan-400' : 'bg-blue-100 text-blue-700'
+                    }`}>
+                      {filterStatus}
+                    </span>
+                  )}
+                </button>
+                
+                {showFilterDropdown && (
+                  <div className={`absolute top-full left-0 mt-1 w-48 rounded-lg border shadow-lg z-10 ${
+                    isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
+                  }`}>
+                    <div className="p-2">
+                      <button
+                        onClick={() => {
+                          setFilterStatus('all');
+                          setShowFilterDropdown(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded text-sm transition-colors ${
+                          filterStatus === 'all'
+                            ? isDarkMode ? 'bg-cyan-500/20 text-cyan-400' : 'bg-blue-100 text-blue-700'
+                            : isDarkMode ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        All Statuses
+                      </button>
+                      {uniqueStatuses.map(status => (
+                        <button
+                          key={status}
+                          onClick={() => {
+                            setFilterStatus(status);
+                            setShowFilterDropdown(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded text-sm transition-colors ${
+                            filterStatus === status
+                              ? isDarkMode ? 'bg-cyan-500/20 text-cyan-400' : 'bg-blue-100 text-blue-700'
+                              : isDarkMode ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-100'
+                          }`}
+                        >
+                          {status}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Export CSV Button */}
+              <button
+                onClick={(e) => {
+                  console.log('Export CSV clicked!', e);
+                  handleExportCSV();
+                }}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                  isDarkMode
+                    ? 'bg-cyan-600 hover:bg-cyan-700 text-white'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
+                style={{ zIndex: 10 }}
+              >
+                <FileDown className="w-4 h-4" />
+                Export CSV
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           {[
@@ -345,7 +554,7 @@ export default function ResultsPage({ isDarkMode, onNavigate }: ResultsPageProps
 
           {/* Taxonomy Classification Flow (full width) */}
           <div>
-            <ChartTaxonomySankey data={csvData} isDarkMode={isDarkMode} />
+            <ChartTaxonomySankey data={filteredData} isDarkMode={isDarkMode} />
           </div>
 
           {/* Rainbow Taxonomy Plot & Radar Composition */}
@@ -372,7 +581,7 @@ export default function ResultsPage({ isDarkMode, onNavigate }: ResultsPageProps
           isDarkMode ? 'border-slate-700' : 'border-slate-200'
         }`}>
           <h3 className={`text-lg mb-6 font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-            Sample Data (First 10 Sequences)
+            Sample Data (First 10 of {filteredData.length} {searchTerm || filterStatus !== 'all' ? 'Filtered ' : ''}Sequences)
           </h3>
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -403,7 +612,7 @@ export default function ResultsPage({ isDarkMode, onNavigate }: ResultsPageProps
                 </tr>
               </thead>
               <tbody>
-                {csvData.slice(0, 10).map((row, idx) => {
+                {filteredData.slice(0, 10).map((row, idx) => {
                   const taxParts = row.Predicted_Taxonomy.split(';');
                   const lastTax = taxParts[taxParts.length - 1]?.split(' ').slice(1).join(' ') || 'Unknown';
                   
