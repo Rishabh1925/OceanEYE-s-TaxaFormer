@@ -525,7 +525,7 @@ export default function UploadPage({ isDarkMode, onNavigate }: UploadPageProps) 
       setProgress(0);
       setLoadingStage(0);
       
-      alert(`Our Backend Server maybe down/ busy due to many requests at same time. Kindly try the sample files given or try uploading after some time`);
+      alert(`Our Backend Server maybe down/ busy due to many requests at same time. Kindly try the sample files given or try uploading after some time.`);
       
       return;
     } finally {
